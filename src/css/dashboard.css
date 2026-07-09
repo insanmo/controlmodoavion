@@ -31,7 +31,7 @@ body {
   width: 56px;
   height: 56px;
   border-radius: 10px;
-  background: linear-gradient(145deg, #0b4f9f, #06306f);
+  background: transparent;
   box-shadow: 0 10px 18px rgba(6, 48, 111, 0.16);
   font-size: 1.18rem;
 }
