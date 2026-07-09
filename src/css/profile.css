@@ -1,0 +1,391 @@
+/* Internal profile and vacation registration */
+.profile-page-card {
+  max-width: 760px;
+  padding-bottom: 8px;
+}
+
+.profile-page-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 18px;
+  padding: 0 20px 22px;
+}
+
+.profile-page-form label {
+  color: var(--navy);
+}
+
+.profile-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.profile-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0 20px 16px;
+}
+
+.profile-sessions {
+  padding: 0 20px 20px;
+}
+
+.profile-sessions h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.profile-sessions p {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.vacation-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.vacation-top-card {
+  min-height: 112px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 22px;
+  border: 1px solid #e2eaf4;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--card-shadow);
+}
+
+.vacation-top-card strong {
+  display: block;
+  color: #006dff;
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.vacation-top-card span:last-child {
+  display: block;
+  margin-top: 7px;
+  color: #24466f;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.vacation-action-card {
+  min-height: 104px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 26px;
+  margin-bottom: 22px;
+}
+
+.vacation-action-card h3,
+.vacation-list-header h3 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 1.22rem;
+}
+
+.vacation-action-card p {
+  margin: 12px 0 0;
+  color: #526d94;
+}
+
+.new-record-btn {
+  min-height: 44px;
+  min-width: 160px;
+  border-radius: 7px;
+  background: #2d63f0;
+  box-shadow: 0 10px 20px rgba(45, 99, 240, 0.18);
+}
+
+.embedded-vacation-panel {
+  margin-bottom: 22px;
+}
+
+.embedded-vacation-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 16px;
+  padding: 0 20px 22px;
+}
+
+.embedded-vacation-form .span-4,
+.embedded-actions {
+  grid-column: 1 / -1;
+}
+
+.embedded-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.vacation-list-card {
+  overflow: hidden;
+}
+
+.vacation-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px 20px 18px;
+}
+
+.vacation-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vacation-tools select,
+.vacation-tools input {
+  min-height: 38px;
+  border-color: #d8e4f2;
+  border-radius: 8px;
+  color: #123768;
+}
+
+.vacation-tools select {
+  width: 170px;
+}
+
+.vacation-tools input {
+  width: 240px;
+}
+
+.vacation-table-wrap {
+  border: 0;
+  border-radius: 0;
+  max-height: calc(100vh - 330px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.vacation-table {
+  min-width: 1180px;
+  width: max-content;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.vacation-table th,
+.vacation-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #e8eef6;
+  color: var(--ink);
+  font-size: 0.74rem;
+  vertical-align: middle;
+  max-width: 176px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vacation-table th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #f8fbff;
+  color: var(--navy);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.vacation-table th:first-child,
+.vacation-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 210px;
+  max-width: 240px;
+  background: #fff;
+  box-shadow: 1px 0 0 #e5edf7;
+}
+
+.vacation-table thead th:first-child {
+  z-index: 4;
+  background: #f8fbff;
+}
+
+.vacation-table th:last-child,
+.vacation-table td:last-child {
+  background: #fff;
+}
+
+.truncas-badge {
+  display: inline-block;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: 4px;
+  margin-right: 4px;
+  white-space: nowrap;
+  vertical-align: middle;
+  border: 1px solid #fde68a;
+}
+
+tr.used-trunca-row {
+  background: #fffbeb;
+}
+
+tr.used-trunca-row td {
+  background: #fffbeb;
+}
+
+tr.used-trunca-row td:first-child {
+  background: #fffbeb;
+}
+
+.vacation-empty-state {
+  min-height: 138px;
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  margin: 0 20px 22px;
+  border: 1px dashed #c9d9ec;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: #526d94;
+  text-align: center;
+}
+
+.vacation-empty-state strong {
+  color: var(--am-navy);
+  font-size: 0.98rem;
+}
+
+.vacation-empty-state span {
+  font-size: 0.86rem;
+}
+
+.embedded-vacation-form input[readonly] {
+  background: #f4f8fd;
+  color: var(--am-navy);
+  font-weight: 750;
+}
+
+.collaborator-search-label {
+  position: relative;
+}
+
+.collaborator-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid #cfe0f3;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 18px 36px rgba(8, 40, 92, 0.14);
+}
+
+.collaborator-results.hidden {
+  display: none;
+}
+
+.collaborator-result {
+  width: 100%;
+  display: grid;
+  gap: 3px;
+  border: 0;
+  border-bottom: 1px solid #edf3fb;
+  padding: 9px 12px;
+  background: #fff;
+  color: var(--am-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.collaborator-result:hover {
+  background: #eef6ff;
+}
+
+.collaborator-result strong {
+  color: var(--am-navy);
+  font-size: 0.86rem;
+}
+
+.collaborator-result span,
+.collaborator-result.muted {
+  color: #526d94;
+  font-size: 0.78rem;
+}
+
+.table-action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.edit-square,
+.delete-square {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: #fff;
+  font-size: 0.9rem;
+}
+
+.edit-square {
+  border: 1px solid #a9d3ff;
+  color: #0072ff;
+}
+
+.delete-square {
+  border: 1px solid #ffc5cc;
+  color: #ff3151;
+}
+
+.list-footer {
+  padding: 20px 24px 24px;
+  color: #526d94;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 1280px) {
+  .vacation-kpi-strip {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .embedded-vacation-form {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 780px) {
+  .profile-page-form,
+  .vacation-kpi-strip,
+  .embedded-vacation-form {
+    grid-template-columns: 1fr;
+  }
+  .vacation-action-card,
+  .vacation-list-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .vacation-tools {
+    width: 100%;
+    flex-direction: column;
+  }
+  .vacation-tools select,
+  .vacation-tools input {
+    width: 100%;
+  }
+}

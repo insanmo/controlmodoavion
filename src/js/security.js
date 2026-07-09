@@ -1,0 +1,43 @@
+export function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+export function cleanMojibake(value) {
+  return String(value ?? "")
+    .replaceAll("\u00c2\u00a1", "\u00a1")
+    .replaceAll("\u00c2\u00bf", "\u00bf")
+    .replaceAll("\u00c3\u00a1", "\u00e1")
+    .replaceAll("\u00c3\u00a9", "\u00e9")
+    .replaceAll("\u00c3\u00ad", "\u00ed")
+    .replaceAll("\u00c3\u00b3", "\u00f3")
+    .replaceAll("\u00c3\u00ba", "\u00fa")
+    .replaceAll("\u00c3\u00b1", "\u00f1")
+    .replaceAll("\u00c3\u0081", "\u00c1")
+    .replaceAll("\u00c3\u0089", "\u00c9")
+    .replaceAll("\u00c3\u008d", "\u00cd")
+    .replaceAll("\u00c3\u0093", "\u00d3")
+    .replaceAll("\u00c3\u009a", "\u00da")
+    .replaceAll("\u00c3\u0091", "\u00d1")
+    .replaceAll("\u00e2\u0080\u00b9", "\u2039")
+    .replaceAll("\u00e2\u0080\u00ba", "\u203a")
+    .replaceAll("\u00e2\u0086\u0092", "\u2192")
+    .replaceAll("\u00e2\u0080\u00a2", "\u2022")
+    .replaceAll("\u00e2\u009c\u008e", "\u270e")
+    .replaceAll("\u00f0\u009f\u0097\u0091", "")
+    .replaceAll("\u00f0\u009f\u0091\u008b", "")
+    .replaceAll("A?o", "A\u00f1o")
+    .replaceAll("D?a", "D\u00eda")
+    .replaceAll("Jun?n", "Jun\u00edn")
+    .replaceAll("Concepci?n", "Concepci\u00f3n")
+    .replaceAll("m?dico", "m\u00e9dico")
+    .replaceAll("d?as", "d\u00edas")
+    .replaceAll("contrase?a", "contrase\u00f1a")
+    .replaceAll("Descripci?n", "Descripci\u00f3n")
+    .replaceAll("Pr?xim", "Pr\u00f3xim")
+    .replaceAll("r?pida", "r\u00e1pida");
+}

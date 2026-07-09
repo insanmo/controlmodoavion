@@ -1,0 +1,803 @@
+/* Recovery, settings and stable filters */
+.logout-mini {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 7px 12px;
+  border-color: #bfd4f3;
+  color: var(--am-blue);
+  background: #fff;
+}
+
+.filters-card {
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.filter-grid label {
+  color: var(--am-navy);
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.filter-grid input,
+.filter-grid select,
+.settings-holiday-form input,
+.settings-list-tools input,
+.settings-list-tools select,
+.temp-password-input {
+  min-height: 38px;
+  border: 1px solid #cfe0f3;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--am-text);
+}
+
+.filter-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.settings-hero-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 20px;
+  padding: 24px 18px;
+  margin-bottom: 18px;
+}
+
+.settings-hero-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  grid-column: 1 / -1;
+}
+
+.settings-icon,
+.settings-title-inline span {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #eaf3ff;
+  color: var(--am-blue);
+  flex: 0 0 auto;
+}
+
+.settings-hero-main h3,
+.settings-title-inline h3 {
+  margin: 0;
+  color: var(--am-navy);
+  font-size: 1.13rem;
+}
+
+.settings-hero-main p {
+  margin: 8px 0 0;
+  color: var(--am-text);
+}
+
+.settings-holiday-form {
+  display: grid;
+  grid-template-columns: minmax(190px, 280px) minmax(260px, 1fr) auto;
+  align-items: end;
+  gap: 16px;
+}
+
+.settings-holiday-form label {
+  color: var(--am-navy);
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.settings-form-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.settings-note {
+  align-self: end;
+  min-height: 78px;
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #bfd4f3;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: var(--am-text);
+  font-size: 0.84rem;
+}
+
+.settings-note strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--am-blue);
+}
+
+.settings-note svg {
+  width: 18px;
+  height: 18px;
+}
+
+.settings-list-card {
+  padding: 16px;
+}
+
+.settings-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.settings-title-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-title-inline span {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.settings-title-inline svg,
+.settings-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.settings-list-tools {
+  display: flex;
+  gap: 12px;
+}
+
+.settings-list-tools select {
+  width: 110px;
+}
+
+.settings-list-tools input {
+  width: 250px;
+}
+
+.settings-table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.settings-table-wrap th,
+.settings-table-wrap td,
+.requests-card th,
+.requests-card td {
+  padding: 12px;
+  border-bottom: 1px solid #e5edf7;
+  color: var(--am-text);
+  font-size: 0.86rem;
+}
+
+.settings-table-wrap th,
+.requests-card th {
+  background: #f6faff;
+  color: var(--am-navy);
+  font-weight: 800;
+}
+
+.settings-table-wrap td svg {
+  width: 18px;
+  height: 18px;
+  color: var(--am-navy);
+}
+
+.day-pill {
+  display: inline-flex;
+  min-width: 42px;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #eef6ff;
+  color: var(--am-blue);
+  font-weight: 750;
+  font-size: 0.78rem;
+}
+
+.settings-list-footer {
+  padding: 14px 4px 2px;
+  color: var(--am-text);
+  font-size: 0.86rem;
+}
+
+.requests-card {
+  padding-bottom: 16px;
+}
+
+.requests-card .table-wrap {
+  margin: 0 18px;
+}
+
+.requests-card table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.temp-password-input {
+  max-width: 220px;
+}
+
+.users-table-wrap table {
+  min-width: 980px;
+}
+
+.user-temp-password-input {
+  width: 210px;
+}
+
+.users-table-wrap td:last-child {
+  white-space: nowrap;
+}
+
+.users-table-wrap [data-reset-user] {
+  border-color: #0b66d8;
+  background: #0b66d8;
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(11, 102, 216, 0.18);
+}
+
+.users-table-wrap [data-reset-user]:hover {
+  background: #084fba;
+}
+
+.table-sort-btn {
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.table-sort-btn.active {
+  color: var(--am-blue);
+}
+
+.full-vacation-form {
+  grid-template-columns: repeat(4, minmax(190px, 1fr));
+}
+
+.full-vacation-form textarea {
+  min-height: 74px;
+}
+
+.full-vacation-form .check-field,
+.formal-check {
+  align-self: end;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid #cfe0f3;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.full-vacation-form .check-field input {
+  width: auto;
+}
+
+.full-vacation-form .span-2 {
+  grid-column: span 2;
+}
+
+.full-vacation-form .span-4 {
+  grid-column: span 4;
+}
+
+.month-auto-field {
+  min-height: 42px;
+  align-self: end;
+}
+
+.calendar-title-row.current-month-only {
+  grid-template-columns: 1fr;
+}
+
+.calendar-month-header {
+  align-items: center;
+}
+
+.calendar-month-header .calendar-title-row {
+  width: min(320px, 100%);
+  padding: 0;
+}
+
+.personal-assigned-card {
+  padding: 18px;
+}
+
+.personal-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.personal-card-header h3 {
+  margin: 0;
+  color: var(--am-navy);
+  font-size: 1.18rem;
+}
+
+.personal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.personal-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.personal-row-actions .compact-btn {
+  min-height: 32px;
+  padding: 6px 10px;
+}
+
+.personal-table-wrap table {
+  min-width: 1260px;
+}
+
+.excel-personal-table-wrap table {
+  min-width: max-content;
+}
+
+.personal-table-wrap th,
+.personal-table-wrap td {
+  white-space: nowrap;
+}
+
+.excel-personal-card {
+  display: flex;
+  max-height: calc(100vh - 158px);
+  min-height: 0;
+  flex-direction: column;
+}
+
+.excel-personal-card .personal-card-header {
+  flex: 0 0 auto;
+}
+
+.excel-personal-table-wrap {
+  max-height: calc(100vh - 290px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--radius-md);
+  border: 1px solid #dce5f0;
+}
+
+.excel-personal-table-wrap table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.excel-personal-table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: linear-gradient(135deg, #e2ebf7, #d4e2f2);
+  color: var(--blue-900);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 10px 12px;
+  border-bottom: 2px solid #c5d6ea;
+}
+
+.excel-personal-table-wrap th,
+.excel-personal-table-wrap td {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.excel-personal-table-wrap tbody tr:not(.po-group-header) td {
+  background: var(--white);
+}
+
+.excel-personal-table-wrap tbody tr:nth-child(even):not(.po-group-header) td {
+  background: #f8faff;
+}
+
+/* Columnas congeladas a la izquierda (identificadores + nombre) */
+.excel-personal-table-wrap .sticky-col {
+  position: sticky;
+  z-index: 10;
+  background: var(--white);
+  box-shadow: 1px 0 0 #d9e2ec;
+}
+.excel-personal-table-wrap thead .sticky-col {
+  z-index: 40;
+  background: linear-gradient(135deg, #e2ebf7, #d4e2f2);
+}
+.excel-personal-table-wrap tbody tr:nth-child(even):not(.po-group-header) .sticky-col {
+  background: #f8faff;
+}
+.excel-personal-table-wrap .sticky-name-col {
+  white-space: normal;
+  word-break: break-word;
+  overflow: visible;
+  text-overflow: clip;
+  font-weight: 600;
+  color: var(--blue-900);
+}
+
+/* Prioridad 1 (crítica) — Vacaciones negras > 0 — fucsia/rosado intenso */
+.excel-personal-table-wrap tbody tr.employee-row.alert-black-vacations td,
+.excel-personal-table-wrap tbody tr.employee-row.alert-black-vacations td.sticky-col,
+.excel-personal-table-wrap tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-black-vacations td,
+.excel-personal-table-wrap tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-black-vacations td.sticky-col {
+  background: #fce4ec;
+}
+.excel-personal-table-wrap tbody tr.employee-row.alert-black-vacations .sticky-name-col {
+  box-shadow: inset 5px 0 0 #d81b60, 1px 0 0 #d9e2ec;
+}
+
+/* Prioridad 2 (alta) — VAC. POR VENCER > 0 y F MAX SALIDA ≤ 2 meses — naranja */
+.excel-personal-table-wrap tbody tr.employee-row.alert-expiring-2m td,
+.excel-personal-table-wrap tbody tr.employee-row.alert-expiring-2m td.sticky-col,
+.excel-personal-table-wrap tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-expiring-2m td,
+.excel-personal-table-wrap tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-expiring-2m td.sticky-col {
+  background: #ffedd5;
+}
+.excel-personal-table-wrap tbody tr.employee-row.alert-expiring-2m .sticky-name-col {
+  box-shadow: inset 4px 0 0 #ea580c, 1px 0 0 #d9e2ec;
+}
+
+/* Prioridad 3 (media) — VAC. POR VENCER > 0 y F MAX SALIDA ≤ 4 meses — amarillo suave */
+.excel-personal-table-wrap tbody tr.employee-row.alert-expiring-4m td,
+.excel-personal-table-wrap tbody tr.employee-row.alert-expiring-4m td.sticky-col,
+.excel-personal-table-wrap tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-expiring-4m td,
+.excel-personal-table-wrap tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-expiring-4m td.sticky-col {
+  background: #fff3d6;
+}
+.excel-personal-table-wrap tbody tr.employee-row.alert-expiring-4m .sticky-name-col {
+  box-shadow: inset 4px 0 0 #f2a100, 1px 0 0 #d9e2ec;
+}
+
+/* Prioridad 4 — Cumpleaños (día hábil del mes del periodo activo) */
+.excel-personal-table-wrap tbody tr.employee-row.alert-birthday td,
+.excel-personal-table-wrap tbody tr.employee-row.alert-birthday td.sticky-col,
+.excel-personal-table-wrap tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-birthday td,
+.excel-personal-table-wrap tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-birthday td.sticky-col {
+  background: #e7f8ee;
+}
+.excel-personal-table-wrap tbody tr.employee-row.alert-birthday .sticky-name-col {
+  box-shadow: inset 4px 0 0 #24a35a, 1px 0 0 #d9e2ec;
+}
+
+.birthday-cake {
+  font-size: 1rem;
+  margin-left: 4px;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+/* Columna de acciones congelada a la derecha */
+.excel-personal-table-wrap.has-actions th:last-child,
+.excel-personal-table-wrap.has-actions td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 10;
+  background: var(--white);
+  box-shadow: -1px 0 0 #d9e2ec;
+}
+.excel-personal-table-wrap.has-actions thead th:last-child {
+  z-index: 40;
+  background: linear-gradient(135deg, #e2ebf7, #d4e2f2);
+}
+.excel-personal-table-wrap.has-actions tbody tr.employee-row.alert-black-vacations td:last-child,
+.excel-personal-table-wrap.has-actions tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-black-vacations td:last-child {
+  background: #fce4ec;
+}
+.excel-personal-table-wrap.has-actions tbody tr.employee-row.alert-expiring-2m td:last-child,
+.excel-personal-table-wrap.has-actions tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-expiring-2m td:last-child {
+  background: #ffedd5;
+}
+.excel-personal-table-wrap.has-actions tbody tr.employee-row.alert-expiring-4m td:last-child,
+.excel-personal-table-wrap.has-actions tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-expiring-4m td:last-child {
+  background: #fff3d6;
+}
+.excel-personal-table-wrap.has-actions tbody tr.employee-row.alert-birthday td:last-child,
+.excel-personal-table-wrap.has-actions tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-birthday td:last-child {
+  background: #e7f8ee;
+}
+
+.personal-card-header p {
+  margin: 4px 0 0;
+  color: #526d94;
+  font-size: 0.88rem;
+}
+
+.personal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 4px 4px;
+  font-size: 0.8rem;
+  color: #374151;
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.legend-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid #d1d5db;
+  flex-shrink: 0;
+}
+.legend-swatch.legend-black    { background: #fce4ec; border-color: #d81b60; }
+.legend-swatch.legend-danger  { background: #ffedd5; border-color: #ea580c; }
+.legend-swatch.legend-warning { background: #fff3d6; border-color: #f2a100; }
+.legend-swatch.legend-birthday { background: #e7f8ee; border-color: #24a35a; }
+
+.alerts-bar.notifications-open {
+  display: flex !important;
+  justify-content: flex-end;
+  padding: 0;
+  position: absolute;
+  top: 76px;
+  right: 28px;
+  left: 28px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.notifications-panel {
+  width: min(440px, calc(100vw - 32px));
+  max-height: 460px;
+  overflow: auto;
+  margin-top: 8px;
+  border: 1px solid #dbe7f5;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 18px 40px rgba(7, 31, 79, 0.16);
+  pointer-events: auto;
+}
+
+.notifications-header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e6eef8;
+  background: #fff;
+  color: var(--navy);
+}
+
+.notifications-list {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.notification-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e6eef8;
+  border-left: 4px solid #1f75ff;
+  border-radius: 6px;
+  background: #f8fbff;
+  color: #123768;
+}
+
+.notification-item.warning {
+  border-left-color: #ff9f1c;
+  background: #fff8ed;
+}
+
+.notification-item.danger {
+  border-left-color: #f0173e;
+  background: #fff4f6;
+}
+
+.notification-item strong {
+  font-size: 0.9rem;
+}
+
+.notification-item span {
+  display: block;
+  margin-top: 4px;
+  color: #526d94;
+  font-size: 0.84rem;
+}
+
+@media (max-width: 1180px) {
+  .filter-grid {
+    grid-template-columns: repeat(3, minmax(160px, 1fr));
+  }
+
+  .settings-hero-card,
+  .settings-holiday-form,
+  .full-vacation-form {
+    grid-template-columns: 1fr;
+  }
+
+  .full-vacation-form .span-2,
+  .full-vacation-form .span-4 {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 780px) {
+  .alerts-bar.notifications-open {
+    top: 94px;
+    right: 16px;
+    left: 16px;
+  }
+
+  .filter-grid,
+  .settings-list-header,
+  .settings-list-tools,
+  .filter-actions {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .settings-list-tools input,
+  .settings-list-tools select {
+    width: 100%;
+  }
+
+  .personal-card-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .personal-actions {
+    justify-content: flex-start;
+  }
+}
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(8, 40, 92, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.loading-spinner {
+  width: 44px;
+  height: 44px;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.loading-text {
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.personal-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 12px;
+  padding: 0 20px 14px;
+  align-items: end;
+}
+
+.personal-filter-grid label {
+  color: var(--ink);
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.personal-filter-grid .filter-actions-label {
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 1px;
+}
+
+tr.po-group-header td {
+  background: var(--blue-50);
+  border-bottom: 1px solid #c9d9ec;
+  padding: 10px 16px;
+  font-weight: 700;
+  color: var(--blue-900);
+  font-size: 0.92rem;
+}
+
+tr.po-group-header .po-group-cell {
+  position: static !important;
+  right: auto !important;
+  max-width: none;
+  overflow: visible;
+  background: var(--blue-50) !important;
+  box-shadow: none !important;
+  padding: 0;
+}
+
+.po-group-label {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  display: inline-flex;
+  width: max-content;
+  min-width: 320px;
+  max-width: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  white-space: nowrap;
+  background: var(--blue-50);
+  box-shadow: none;
+}
+
+.po-group-label strong {
+  font-size: 0.95rem;
+}
+
+.po-count {
+  flex: 0 0 auto;
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 1180px) {
+  .personal-filter-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 780px) {
+  .personal-filter-grid {
+    grid-template-columns: 1fr;
+  }
+}

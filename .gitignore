@@ -1,0 +1,37 @@
+# Dependencias
+node_modules/
+
+# Build
+dist/
+
+# Configuración local (secretos de Supabase)
+config.local.js
+
+# Variables de entorno locales (override). .env.production SÍ se versiona (usa la anon key pública).
+.env.local
+.env.*.local
+
+# SQL y datos (se mantienen solo en local)
+*.sql
+supabase/
+local-sql/
+
+# Recursos / Excel
+recursos/
+
+# Logs y archivos de entorno locales
+*.log
+php-server.err.log
+php-server.out.log
+
+# Herramientas y configuración locales
+concat-css.ps1
+opencode.json
+
+# Lockfiles de pnpm
+pnpm-lock.yaml
+pnpm-workspace.yaml
+
+# Herramientas de prueba (logs locales)
+.playwright-mcp/
+

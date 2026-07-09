@@ -1,0 +1,164 @@
+/* Consolidated page and holidays */
+.consolidated-filter-card {
+  padding: 26px;
+  margin-bottom: 14px;
+}
+
+.consolidated-filter-grid {
+  display: grid;
+  grid-template-columns: 180px 130px 150px 150px 130px 120px minmax(190px, 1fr);
+  gap: 14px;
+  align-items: end;
+}
+
+.consolidated-filter-grid label {
+  color: var(--navy);
+  font-size: 0.82rem;
+}
+
+.consolidated-filter-grid input,
+.consolidated-filter-grid select {
+  min-height: 42px;
+  border-color: #d8e4f2;
+  border-radius: 6px;
+  color: #123768;
+  background: #fff;
+}
+
+.consolidated-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.export-green {
+  border-color: #38b46a;
+  color: #189251;
+}
+
+.consolidated-table-card {
+  margin-top: 12px;
+}
+
+.records-count {
+  color: #526d94;
+  font-size: 0.9rem;
+}
+
+.pagination-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 18px 24px 24px;
+}
+
+.holidays-card {
+  margin: 14px 0;
+}
+
+.settings-card {
+  padding-bottom: 6px;
+}
+
+.settings-holidays {
+  padding-top: 4px;
+}
+
+.holiday-form {
+  display: grid;
+  grid-template-columns: 180px minmax(240px, 1fr) auto auto;
+  gap: 12px;
+  align-items: end;
+  padding: 0 20px 18px;
+}
+
+.holiday-list {
+  display: grid;
+  gap: 8px;
+  padding: 0 20px 20px;
+}
+
+.holiday-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #e8eef6;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #123768;
+}
+
+.holiday-list > div > span:last-child {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 1280px) {
+  .consolidated-filter-grid {
+    grid-template-columns: repeat(3, minmax(160px, 1fr));
+  }
+  .holiday-form {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 780px) {
+  .consolidated-filter-grid,
+  .holiday-form {
+    grid-template-columns: 1fr;
+  }
+  .consolidated-actions {
+    justify-content: stretch;
+    flex-direction: column;
+  }
+}
+
+/* Edición inline de filas (columnas y feriados) */
+.column-config-table .editing-row td,
+.holiday-table .editing-row td {
+  vertical-align: middle;
+  background: #f3f9ff;
+}
+
+.column-config-table .editing-row input,
+.column-config-table .editing-row select,
+.holiday-table .editing-row input {
+  width: 100%;
+  min-width: 90px;
+  padding: 6px 8px;
+  border: 1px solid #c6defb;
+  border-radius: 7px;
+  font-size: 0.82rem;
+  background: #fff;
+}
+
+.column-config-table .editing-row input[type="number"] {
+  min-width: 64px;
+}
+
+.check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  color: var(--navy, #2d4373);
+}
+
+.save-square {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: #fff;
+  border: 1px solid #a8e6c2;
+  color: #15a35a;
+  font-size: 0.9rem;
+}
+
+.save-square:hover {
+  background: #ecfdf3;
+}

@@ -1,0 +1,139 @@
+/* Final interaction fixes */
+.event-pill {
+  border-left-width: 4px;
+  color: var(--event-ink, #0f172a);
+  background: var(--event-bg, #eff6ff);
+  border-left-color: var(--event-accent, #2563eb);
+}
+
+.event-pill.status-pendiente,
+.event-pill.status-observado,
+.event-pill.status-reprogramado,
+.event-pill.status-completado {
+  color: var(--event-ink, #0f172a);
+  background: var(--event-bg, #eff6ff);
+  border-left-color: var(--event-accent, #2563eb);
+}
+
+.event-pill.color-0,
+.person-avatar.color-0,
+.legend-dot.color-0,
+.dash-day.marked.color-0 { --event-accent: #2563eb; --event-bg: #dbeafe; --event-ink: #1e3a8a; background: var(--event-accent); }
+.event-pill.color-1,
+.person-avatar.color-1,
+.legend-dot.color-1,
+.dash-day.marked.color-1 { --event-accent: #22c55e; --event-bg: #dcfce7; --event-ink: #166534; background: var(--event-accent); }
+.event-pill.color-2,
+.person-avatar.color-2,
+.legend-dot.color-2,
+.dash-day.marked.color-2 { --event-accent: #fb923c; --event-bg: #ffedd5; --event-ink: #9a3412; background: var(--event-accent); }
+.event-pill.color-3,
+.person-avatar.color-3,
+.legend-dot.color-3,
+.dash-day.marked.color-3 { --event-accent: #ec4899; --event-bg: #fce7f3; --event-ink: #9d174d; background: var(--event-accent); }
+.event-pill.color-4,
+.person-avatar.color-4,
+.legend-dot.color-4,
+.dash-day.marked.color-4 { --event-accent: #a855f7; --event-bg: #f3e8ff; --event-ink: #6b21a8; background: var(--event-accent); }
+.event-pill.color-5,
+.person-avatar.color-5,
+.legend-dot.color-5,
+.dash-day.marked.color-5 { --event-accent: #14b8a6; --event-bg: #ccfbf1; --event-ink: #115e59; background: var(--event-accent); }
+.event-pill.color-6,
+.person-avatar.color-6,
+.legend-dot.color-6,
+.dash-day.marked.color-6 { --event-accent: #f59e0b; --event-bg: #fef3c7; --event-ink: #92400e; background: var(--event-accent); }
+.event-pill.color-7,
+.person-avatar.color-7,
+.legend-dot.color-7,
+.dash-day.marked.color-7 { --event-accent: #64748b; --event-bg: #f1f5f9; --event-ink: #334155; background: var(--event-accent); }
+.event-pill.color-8,
+.person-avatar.color-8,
+.legend-dot.color-8,
+.dash-day.marked.color-8 { --event-accent: #38bdf8; --event-bg: #e0f2fe; --event-ink: #075985; background: var(--event-accent); }
+.event-pill.color-9,
+.person-avatar.color-9,
+.legend-dot.color-9,
+.dash-day.marked.color-9 { --event-accent: #ef4444; --event-bg: #fee2e2; --event-ink: #991b1b; background: var(--event-accent); }
+.event-pill.color-10,
+.person-avatar.color-10,
+.legend-dot.color-10,
+.dash-day.marked.color-10 { --event-accent: #84cc16; --event-bg: #ecfccb; --event-ink: #3f6212; background: var(--event-accent); }
+.event-pill.color-11,
+.person-avatar.color-11,
+.legend-dot.color-11,
+.dash-day.marked.color-11 { --event-accent: #6366f1; --event-bg: #e0e7ff; --event-ink: #3730a3; background: var(--event-accent); }
+.event-pill.color-12,
+.person-avatar.color-12,
+.legend-dot.color-12,
+.dash-day.marked.color-12 { --event-accent: #d946ef; --event-bg: #fae8ff; --event-ink: #86198f; background: var(--event-accent); }
+.event-pill.color-13,
+.person-avatar.color-13,
+.legend-dot.color-13,
+.dash-day.marked.color-13 { --event-accent: #0ea5e9; --event-bg: #e0f2fe; --event-ink: #075985; background: var(--event-accent); }
+.event-pill.color-14,
+.person-avatar.color-14,
+.legend-dot.color-14,
+.dash-day.marked.color-14 { --event-accent: #10b981; --event-bg: #d1fae5; --event-ink: #065f46; background: var(--event-accent); }
+.event-pill.color-15,
+.person-avatar.color-15,
+.legend-dot.color-15,
+.dash-day.marked.color-15 { --event-accent: #f97316; --event-bg: #ffedd5; --event-ink: #9a3412; background: var(--event-accent); }
+
+.person-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 3;
+  text-align: center;
+  color: #fff !important;
+  font-weight: 800;
+}
+
+.event-pill[class*="color-"] {
+  background: var(--event-bg);
+  color: var(--event-ink);
+  border-left-color: var(--event-accent);
+}
+
+.birthday-item {
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px 12px;
+}
+
+.birthday-item .person-avatar {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  justify-self: center;
+}
+
+.birthday-item em {
+  grid-column: 2;
+  width: max-content;
+  max-width: 100%;
+}
+
+.user-form {
+  grid-template-columns: repeat(5, minmax(160px, 1fr));
+}
+
+.user-form-actions {
+  display: flex;
+  gap: 10px;
+  align-items: end;
+}
+
+.user-action-buttons {
+  flex-wrap: nowrap;
+}
+
+.users-table-wrap td:last-child {
+  min-width: 360px;
+}
+
+@media (max-width: 1180px) {
+  .user-form {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+}

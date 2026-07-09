@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CONTROL MODO AVIÓN</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/styles.css">
+  <link rel="stylesheet" href="./src/css/focal-command.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script type="module" src="./src/js/app-core.js"></script>
+</head>
+<body>
+  <main id="app" class="app-shell">
+    <section id="loadingView" class="loading-overlay">
+      <div class="brand-lockup" style="flex-direction: column; text-align: center; gap: 18px;">
+        <div class="brand-mark" style="width: 64px; height: 64px; font-size: 1.4rem;">AM</div>
+        <div>
+          <h2 style="color: #fff;">CONTROL MODO AVIÓN</h2>
+        </div>
+      </div>
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Cargando sesión…</p>
+    </section>
+
+    <section class="login-view hidden" id="loginView">
+      <div class="login-panel">
+        <div class="brand-lockup">
+          <div class="brand-mark">AM</div>
+          <div>
+            <h1>CONTROL MODO AVIÓN</h1>
+            <p>Control y seguimiento de vacaciones del equipo</p>
+          </div>
+        </div>
+
+        <form id="loginForm" class="stack">
+          <label>
+            Correo Indra
+            <input id="loginEmail" type="email" autocomplete="username" placeholder="nombre@indra.com" required>
+          </label>
+          <label>
+            Contraseña
+            <input id="loginPassword" type="password" autocomplete="current-password" required>
+          </label>
+          <button class="primary-btn" type="submit">Iniciar sesión</button>
+          <button class="link-btn" id="forgotBtn" type="button">Olvidé mi contraseña</button>
+        </form>
+
+        <form id="forgotForm" class="stack hidden">
+          <label>
+            Correo Indra
+            <input id="forgotEmail" type="email" placeholder="nombre@indra.com">
+          </label>
+          <button class="primary-btn" type="submit">Enviar solicitud</button>
+          <button class="link-btn" id="backLoginBtn" type="button">Volver al login</button>
+        </form>
+
+        <div class="login-note">
+          <strong>Producción:</strong> inicia sesión con tu cuenta autorizada.
+        </div>
+      </div>
+    </section>
+
+    <section class="main-view hidden" id="mainView">
+      <aside class="sidebar">
+        <div class="brand-lockup compact">
+          <div class="brand-mark">AM</div>
+          <div>
+            <h2>CONTROL MODO AVIÓN</h2>
+          </div>
+        </div>
+        <nav id="navTabs" class="nav-tabs"></nav>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <div class="topbar-title">
+            <h2 id="greetingTitle">Dashboard</h2>
+            <p id="greetingSubtitle">Aquí tienes el resumen de vacaciones del equipo.</p>
+          </div>
+          <div class="topbar-actions">
+            <button class="notification-btn" id="notificationBtn" type="button" aria-label="Notificaciones">
+              <span class="bell-icon" aria-hidden="true"></span>
+              <span id="notificationCount">0</span>
+            </button>
+            <button class="profile-btn" id="profileBtn" type="button" title="Perfil" aria-label="Abrir perfil">
+              <span id="profileInitials">AM</span>
+            </button>
+            <div class="user-summary">
+              <strong id="profileNameLabel">Usuario</strong>
+              <span id="profileRoleLabel">Rol</span>
+            </div>
+            <button class="chevron-btn" id="profileChevronBtn" type="button" aria-label="Abrir perfil"></button>
+            <button class="ghost-btn logout-mini" id="logoutBtn" type="button">Salir</button>
+          </div>
+        </header>
+
+        <section id="alertsBar" class="alerts-bar"></section>
+        <section id="content" class="content"></section>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="changePasswordDialog" class="modal">
+    <form id="changePasswordForm" class="stack" autocomplete="on" novalidate>
+      <h3>Cambiar contraseña</h3>
+      <p>Tu acceso tiene una contraseña temporal. Define una contraseña definitiva para continuar.</p>
+      <input id="changePasswordUsername" name="username" type="email" autocomplete="username" class="visually-hidden" tabindex="-1" aria-hidden="true">
+      <label>
+        Nueva contraseña
+        <input id="newPassword" name="new-password" type="password" minlength="8" autocomplete="new-password" required>
+      </label>
+      <label>
+        Repetir contraseña
+        <input id="newPasswordRepeat" name="new-password-repeat" type="password" minlength="8" autocomplete="new-password" required>
+      </label>
+      <button class="primary-btn" type="submit">Guardar contraseña</button>
+    </form>
+  </dialog>
+
+  <dialog id="detailDialog" class="modal wide">
+    <div id="detailContent"></div>
+  </dialog>
+
+  <dialog id="settingsDialog" class="modal wide">
+    <form id="settingsForm" method="dialog" class="stack">
+      <h3>Supabase</h3>
+      <label>
+        URL
+        <input id="supabaseUrl" type="url" placeholder="https://proyecto.supabase.co">
+      </label>
+      <label>
+        Anon key
+        <input id="supabaseAnonKey" type="password" autocomplete="off">
+      </label>
+      <div class="modal-actions">
+        <button class="ghost-btn compact-btn" id="cancelSettingsBtn" type="button">Cancelar</button>
+        <button class="primary-btn compact-btn" type="submit">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="profileDialog" class="modal wide">
+    <form id="profileForm" method="dialog" class="stack">
+      <h3>Perfil</h3>
+      <label>
+        Nombre
+        <input id="profileName" name="name" type="text">
+      </label>
+      <label>
+        Correo
+        <input id="profileEmail" name="email" type="email">
+      </label>
+      <label>
+        Nueva contraseña
+        <input id="profilePassword" name="password" type="password" minlength="8">
+      </label>
+      <label>
+        Repetir contraseña
+        <input id="profilePasswordRepeat" name="passwordRepeat" type="password" minlength="8">
+      </label>
+      <div class="modal-actions">
+        <button class="ghost-btn compact-btn" id="cancelProfileBtn" type="button">Cancelar</button>
+        <button class="primary-btn compact-btn" type="submit">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="vacationDialog" class="modal extra-wide">
+    <div id="vacationDialogContent"></div>
+  </dialog>
+
+  <dialog id="personalDialog" class="modal extra-wide">
+    <div id="personalDialogContent"></div>
+  </dialog>
+
+  <dialog id="focalCommandDialog" class="modal extra-wide">
+    <div id="focalCommandDialogContent"></div>
+  </dialog>
+</body>
+</html>
