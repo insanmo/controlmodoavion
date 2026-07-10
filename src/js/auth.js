@@ -3,7 +3,7 @@ import { readRuntimeConfig, waitForSupabaseClient } from "./config.js";
 import { getSupabaseClient } from "../lib/supabaseClient.js";
 import { AirControlApi } from "./aircontrol-api.js";
 import { SupabaseStore } from "./supabase-store.js";
-import { loadData, updateRecord } from "./db.js";
+import { loadData } from "./db.js";
 import { notify } from "./ui.js";
 
 export async function initStorage() {
@@ -129,9 +129,7 @@ export async function saveNewPassword(event) {
 }
 
 export async function assignTemporaryPassword(user, tempPassword) {
-  const result = await state.auth.invokeTemporaryPassword(user.email, tempPassword);
-  await updateRecord("users", user.id, { must_change_password: true });
-  return result;
+  return state.auth.invokeTemporaryPassword(user.email, tempPassword);
 }
 
 export function logout() {

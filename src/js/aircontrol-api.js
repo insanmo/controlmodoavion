@@ -4,6 +4,13 @@ function getSessionToken() {
   return sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY) || "";
 }
 
+function normalizeFunctionError(message) {
+  const text = String(message || "No se pudo completar la solicitud.");
+  if (!isInvalidSessionError({ message: text })) return text;
+  removeSessionToken();
+  return "Tu sesión venció o ya no es válida. Vuelve a iniciar sesión e intenta nuevamente.";
+}
+
 function setSessionToken(token) {
   sessionStorage.setItem(SESSION_KEY, token);
   localStorage.removeItem(SESSION_KEY);
@@ -22,11 +29,12 @@ export class AirControlApi {
 
   async call(action, payload = {}) {
     if (!this.client) throw new Error("Supabase no est\u00e1 configurado.");
+    if (action !== "login") this.sessionToken = getSessionToken();
     const { data, error } = await this.client.functions.invoke("aircontrol-api", {
       body: { action, sessionToken: this.sessionToken, ...payload }
     });
-    if (error) throw new Error(await functionErrorMessage(error));
-    if (data?.error) throw new Error(data.error);
+    if (error) throw new Error(normalizeFunctionError(await functionErrorMessage(error)));
+    if (data?.error) throw new Error(normalizeFunctionError(data.error));
     return data || {};
   }
 

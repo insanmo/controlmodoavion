@@ -1,6 +1,5 @@
 import { state } from "../state.js";
 import { safeCell, dateTimeText, slug, svgIcon } from "../utils.js";
-import { updateRecord } from "../db.js";
 import { notify } from "../ui.js";
 
 export function renderRequests(content) {
@@ -28,9 +27,6 @@ export async function resolveRequest(id) {
   if (!tempPassword || tempPassword.length < 8) { input?.focus(); return notify("Ingresa una contraseña temporal de al menos 8 caracteres."); }
   const { assignTemporaryPassword } = await import("../auth.js");
   await assignTemporaryPassword(user, tempPassword);
-  await updateRecord("passwordRequests", id, {
-    status: "atendida", resolved_at: new Date().toISOString(), resolved_by: state.currentUser.id
-  });
   notify("Contraseña temporal asignada.");
   import("../app-core.js").then((mod) => mod.renderApp({ forceReload: true }));
 }
