@@ -381,7 +381,8 @@ async function tableAction(db: ReturnType<typeof createClient>, user: Record<str
     return json({ rows });
   }
 
-  if (!canWrite(user, name)) return json({ error: "No autorizado." }, 403);
+  const canFocalUpdatePersonalBalance = user.role === "focal" && name === "personal" && action === "update";
+  if (!canFocalUpdatePersonalBalance && !canWrite(user, name)) return json({ error: "No autorizado." }, 403);
   const lockError = await writeLockError(db, user, name);
   if (lockError) return json({ error: lockError }, 403);
   if (action === "insert") return await insertRow(db, user, name, table, (body.row || {}) as Record<string, unknown>);
@@ -461,6 +462,14 @@ async function updateRow(db: ReturnType<typeof createClient>, user: Record<strin
     if (existingError) return json({ error: existingError.message }, 500);
     if (!existing || existing.focal_user_id !== user.id || existing.deleted_at) return json({ error: "No autorizado." }, 403);
     changes.focal_user_id = user.id;
+  } else if (user.role === "focal" && name === "personal") {
+    if (!(await personBelongsToFocal(db, id, String(user.id), String(user.name || "")))) {
+      return json({ error: "No tienes acceso a ese colaborador." }, 403);
+    }
+    const allowedFields = new Set(["current_vacation_days", "truncated_vacation_days", "excel_fields", "updated_at"]);
+    for (const key of Object.keys(changes)) {
+      if (!allowedFields.has(key)) return json({ error: "No autorizado." }, 403);
+    }
   } else if (!canWrite(user, name)) {
     return json({ error: "No autorizado." }, 403);
   }
