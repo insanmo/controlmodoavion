@@ -1,6 +1,8 @@
 import { state } from "../state.js";
 import { safeCell, dateText, titleText, slug, svgIcon, normalizeKey } from "../utils.js";
 
+const MARCHA_BLANCA_OPERATIONAL_MONTH = "2026-07";
+
 export function visiblePersonal() {
   const rows = state.personal.filter((person) => person.status !== "inactivo" && !person.missing_from_latest_import);
   if (state.currentUser.role === "focal") {
@@ -41,7 +43,9 @@ export function operationalMonthValue() {
 }
 
 export function vacationMinMonthValue() {
-  return nextMonthValue(operationalMonthValue());
+  const operationalMonth = operationalMonthValue();
+  if (operationalMonth === MARCHA_BLANCA_OPERATIONAL_MONTH) return operationalMonth;
+  return nextMonthValue(operationalMonth);
 }
 
 export function minStartDateForType(type) {
