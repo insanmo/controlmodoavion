@@ -78,6 +78,14 @@ export async function saveVacation(event) {
   const returnDate = form.get("return_date") || (derived.returnDate ? toDateInput(derived.returnDate) : "");
   if (!returnDate) return notify("Ingresa la fecha de retorno.");
   if (returnDate <= endDate) return notify("La fecha de retorno debe ser posterior a la fecha fin.");
+  const overlappingVacation = state.vacations.find((item) =>
+    item.id !== id
+    && item.collaborator_id === person.id
+    && item.type === type
+    && sameActivePeriod(item)
+    && rangesOverlap(startDate, endDate, item.start_date, item.end_date)
+  );
+  if (overlappingVacation) return notify("Ya existe un registro para este colaborador que se cruza con esas fechas.");
 
   const emailStatus = form.get("email_status") || "pendiente";
   if (emailStatus === "si" && !form.get("email_date")) return notify("Ingresa la fecha de correo.");
@@ -519,6 +527,10 @@ function formalStatusCell(item, usage = {}) {
 function sameActivePeriod(item) {
   const period = activePeriod();
   return !period || !item.period_id || item.period_id === period.id;
+}
+
+function rangesOverlap(startA, endA, startB, endB) {
+  return startA <= endB && endA >= startB;
 }
 
 function vacationBalanceExcelFields(person, result) {

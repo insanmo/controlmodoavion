@@ -785,7 +785,10 @@ function renderPoclacPage(content) {
       <div class="poc-title">${safeCell(p.title || "Sin título")}</div>
       <div class="poc-body">${safeCell((p.body || "").slice(0, 220))}${(p.body || "").length > 220 ? "…" : ""}</div>
       <div class="poc-tags">${(p.tags || []).map((t) => `<span class="poc-tag">${safeCell(t)}</span>`).join("")}</div>
-      ${canWriteFocal() ? `<div class="poc-actions"><button class="ghost-btn compact-btn" data-fc-poc-edit="${p.id}">Editar</button></div>` : ""}
+      ${canWriteFocal() ? `<div class="poc-actions">
+        <button class="ghost-btn compact-btn" data-fc-poc-pin="${p.id}" type="button"><i class="fc-ico">${svgIcon("pin")}</i> ${p.is_pinned ? "Desanclar" : "Anclar"}</button>
+        <button class="ghost-btn compact-btn" data-fc-poc-edit="${p.id}" type="button">Editar</button>
+      </div>` : ""}
     </div>`).join("");
 
   const formHtml = (state.fcForm.active && state.fcForm.module === "poclac") ? poclacFormHTML() : "";
@@ -803,10 +806,11 @@ function renderPoclacPage(content) {
 
   content.querySelector("#fcNewPocBtn")?.addEventListener("click", () => openForm("poclac", null));
   content.querySelectorAll("[data-fc-poc]").forEach((el) => el.addEventListener("click", (e) => {
-    if (e.target.closest("[data-fc-poc-edit]")) return;
+    if (e.target.closest("[data-fc-poc-edit]") || e.target.closest("[data-fc-poc-pin]")) return;
     openForm("poclac", el.dataset.fcPoc);
   }));
   content.querySelectorAll("[data-fc-poc-edit]").forEach((el) => el.addEventListener("click", (e) => { e.stopPropagation(); openForm("poclac", el.dataset.fcPocEdit); }));
+  content.querySelectorAll("[data-fc-poc-pin]").forEach((el) => el.addEventListener("click", (e) => { e.stopPropagation(); togglePoclacPinned(el.dataset.fcPocPin); }));
 
   bindDraftBanner(content, "poclac");
   if (formHtml) bindPoclacForm(content);
@@ -914,6 +918,24 @@ async function removePoclac(id) {
     await refresh();
   } catch (error) {
     notify(error.message || "No se pudo eliminar.");
+  }
+}
+
+async function togglePoclacPinned(id) {
+  const item = state.poclacSessions.find((p) => p.id === id);
+  if (!item) return;
+  try {
+    await state.store.update("poclacSessions", id, {
+      is_pinned: !item.is_pinned,
+      updated_by: currentUserId(),
+      updated_at: nowIso()
+    });
+    await deleteDraftByKey("poclac", id).catch(() => {});
+    clearActiveDraft();
+    notify(item.is_pinned ? "SesiÃ³n desanclada." : "SesiÃ³n anclada.");
+    await refresh();
+  } catch (error) {
+    notify(error.message || "No se pudo actualizar el anclado.");
   }
 }
 

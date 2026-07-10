@@ -14,7 +14,7 @@ export function renderCalendar(content) {
   for (let i = 0; i < offset; i++) cells += `<div class="day-cell"></div>`;
   for (let day = 1; day <= days; day++) {
     const date = `${month}-${String(day).padStart(2, "0")}`;
-    const events = vacations.filter((item) => item.start_date <= date && item.end_date >= date);
+    const events = uniqueCalendarEvents(vacations.filter((item) => item.start_date <= date && item.end_date >= date));
     cells += `<div class="day-cell"><div class="day-number">${day}</div>${events.map((event) => `<button class="event-pill color-${collaboratorColorIndex(event.collaborator_id)} status-${slug(event.status || "pendiente")}" data-detail="${event.id}" type="button">${safeCell(collaboratorName(event.collaborator_id))}<br>${safeCell(event.status)}</button>`).join("")}</div>`;
   }
   content.innerHTML = `
@@ -47,4 +47,21 @@ function renderActiveTabInternal() {
 
 function overlapsMonth(item, month) {
   return item.start_date <= `${month}-31` && item.end_date >= `${month}-01`;
+}
+
+function uniqueCalendarEvents(events) {
+  const seen = new Set();
+  return events.filter((event) => {
+    const key = [
+      event.collaborator_id,
+      event.type,
+      event.start_date,
+      event.end_date,
+      event.return_date,
+      event.period_id || ""
+    ].join("|");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
