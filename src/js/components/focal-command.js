@@ -780,7 +780,7 @@ function renderPoclacPage(content) {
         <span class="poc-date">${p.session_date ? dateText(p.session_date) : "—"}</span>
         <span class="poc-type">${safeCell(p.session_type || "POCLAC")}</span>
         ${statusBadge(p.status || "Pendiente")}
-        ${p.is_pinned ? svgIcon("pin") + `<span class="poc-pin">Anclado</span>` : ""}
+        ${p.is_pinned ? `<span class="poc-pin"><i class="fc-ico">${svgIcon("pin")}</i> Anclado</span>` : ""}
       </div>
       <div class="poc-title">${safeCell(p.title || "Sin título")}</div>
       <div class="poc-body">${safeCell((p.body || "").slice(0, 220))}${(p.body || "").length > 220 ? "…" : ""}</div>

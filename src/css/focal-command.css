@@ -329,6 +329,7 @@
 .poc-card:hover { border-color: var(--fc-border2); }
 .poc-card.pinned { border-left: 3px solid var(--fc-accent); }
 .poc-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.poc-meta svg { width: 13px; height: 13px; flex: 0 0 13px; display: block; }
 .poc-date { font-size: 0.76rem; color: var(--am-muted); }
 .poc-type { font-size: 0.68rem; padding: 2px 9px; border-radius: 10px; background: var(--blue-100); color: var(--blue-700); font-weight: 700; }
 .poc-pin { font-size: 0.72rem; color: var(--fc-accent); font-weight: 700; display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
