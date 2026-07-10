@@ -458,9 +458,9 @@ async function updateRow(db: ReturnType<typeof createClient>, user: Record<strin
     if (!existing || existing.user_id !== user.id) return json({ error: "No autorizado." }, 403);
     changes.user_id = user.id;
   } else if (user.role === "focal" && FOCAL_OWNED.includes(name)) {
-    const { data: existing, error: existingError } = await db.from(table).select("focal_user_id, deleted_at").eq("id", id).maybeSingle();
+    const { data: existing, error: existingError } = await db.from(table).select("focal_user_id").eq("id", id).maybeSingle();
     if (existingError) return json({ error: existingError.message }, 500);
-    if (!existing || existing.focal_user_id !== user.id || existing.deleted_at) return json({ error: "No autorizado." }, 403);
+    if (!existing || existing.focal_user_id !== user.id) return json({ error: "No autorizado." }, 403);
     changes.focal_user_id = user.id;
   } else if (user.role === "focal" && name === "personal") {
     if (!(await personBelongsToFocal(db, id, String(user.id), String(user.name || "")))) {
@@ -577,9 +577,9 @@ async function deleteRow(db: ReturnType<typeof createClient>, user: Record<strin
     if (existingError) return json({ error: existingError.message }, 500);
     if (!existing || existing.user_id !== user.id) return json({ error: "No autorizado." }, 403);
   } else if (user.role === "focal" && FOCAL_OWNED.includes(name)) {
-    const { data: existing, error: existingError } = await db.from(table).select("focal_user_id, deleted_at").eq("id", id).maybeSingle();
+    const { data: existing, error: existingError } = await db.from(table).select("focal_user_id").eq("id", id).maybeSingle();
     if (existingError) return json({ error: existingError.message }, 500);
-    if (!existing || existing.focal_user_id !== user.id || existing.deleted_at) return json({ error: "No autorizado." }, 403);
+    if (!existing || existing.focal_user_id !== user.id) return json({ error: "No autorizado." }, 403);
   } else if (user.role === "focal" && name === "vacations") {
     const { data: existing, error: existingError } = await db
       .from(table)
