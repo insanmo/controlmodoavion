@@ -2922,26 +2922,26 @@ body {
   color: var(--blue-900);
 }
 
-/* Prioridad 1 (crítica) — Vacaciones negras > 0 — morado */
+/* Prioridad 1 (crítica) — Vacaciones negras > 0 — rojo */
 .excel-personal-table-wrap tbody tr.employee-row.alert-black-vacations td,
 .excel-personal-table-wrap tbody tr.employee-row.alert-black-vacations td.sticky-col,
 .excel-personal-table-wrap tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-black-vacations td,
 .excel-personal-table-wrap tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-black-vacations td.sticky-col {
-  background: #f3e8ff;
+  background: #fee2e2;
 }
 .excel-personal-table-wrap tbody tr.employee-row.alert-black-vacations .sticky-name-col {
-  box-shadow: inset 5px 0 0 #7c3aed, 1px 0 0 #d9e2ec;
+  box-shadow: inset 5px 0 0 #dc2626, 1px 0 0 #d9e2ec;
 }
 
-/* Prioridad 2 (alta) — VAC. POR VENCER > 0 y F MAX SALIDA ≤ 2 meses — rojo */
+/* Prioridad 2 (alta) — VAC. POR VENCER > 0 y F MAX SALIDA ≤ 2 meses — morado */
 .excel-personal-table-wrap tbody tr.employee-row.alert-expiring-2m td,
 .excel-personal-table-wrap tbody tr.employee-row.alert-expiring-2m td.sticky-col,
 .excel-personal-table-wrap tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-expiring-2m td,
 .excel-personal-table-wrap tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-expiring-2m td.sticky-col {
-  background: #fce4ec;
+  background: #f3e8ff;
 }
 .excel-personal-table-wrap tbody tr.employee-row.alert-expiring-2m .sticky-name-col {
-  box-shadow: inset 4px 0 0 #d81b60, 1px 0 0 #d9e2ec;
+  box-shadow: inset 4px 0 0 #7c3aed, 1px 0 0 #d9e2ec;
 }
 
 /* Prioridad 3 (media) — VAC. POR VENCER > 0 y F MAX SALIDA ≤ 4 meses — amarillo suave */
@@ -2988,11 +2988,11 @@ body {
 }
 .excel-personal-table-wrap.has-actions tbody tr.employee-row.alert-black-vacations td:last-child,
 .excel-personal-table-wrap.has-actions tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-black-vacations td:last-child {
-  background: #f3e8ff;
+  background: #fee2e2;
 }
 .excel-personal-table-wrap.has-actions tbody tr.employee-row.alert-expiring-2m td:last-child,
 .excel-personal-table-wrap.has-actions tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-expiring-2m td:last-child {
-  background: #fce4ec;
+  background: #f3e8ff;
 }
 .excel-personal-table-wrap.has-actions tbody tr.employee-row.alert-expiring-4m td:last-child,
 .excel-personal-table-wrap.has-actions tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-expiring-4m td:last-child {
@@ -3031,8 +3031,8 @@ body {
   border: 1px solid #d1d5db;
   flex-shrink: 0;
 }
-.legend-swatch.legend-black    { background: #f3e8ff; border-color: #7c3aed; }
-.legend-swatch.legend-danger  { background: #fce4ec; border-color: #d81b60; }
+.legend-swatch.legend-black    { background: #fee2e2; border-color: #dc2626; }
+.legend-swatch.legend-danger  { background: #f3e8ff; border-color: #7c3aed; }
 .legend-swatch.legend-warning { background: #fff3d6; border-color: #f2a100; }
 .legend-swatch.legend-birthday { background: #e7f8ee; border-color: #24a35a; }
 
