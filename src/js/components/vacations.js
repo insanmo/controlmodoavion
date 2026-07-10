@@ -75,6 +75,10 @@ export async function saveVacation(event) {
   const derived = calculateVacationDerived(startDate, endDate);
   if (!derived.days) return notify("El rango no contiene días válidos.");
 
+  const returnDate = form.get("return_date") || (derived.returnDate ? toDateInput(derived.returnDate) : "");
+  if (!returnDate) return notify("Ingresa la fecha de retorno.");
+  if (returnDate <= endDate) return notify("La fecha de retorno debe ser posterior a la fecha fin.");
+
   const emailStatus = form.get("email_status") || "pendiente";
   if (emailStatus === "si" && !form.get("email_date")) return notify("Ingresa la fecha de correo.");
 
@@ -86,7 +90,7 @@ export async function saveVacation(event) {
     type: form.get("type"),
     start_date: startDate,
     end_date: endDate,
-    return_date: derived.returnDate,
+    return_date: returnDate,
     days: derived.days,
     month: String(startDate).slice(0, 7),
     period_id: existingVacation?.period_id || activePeriod()?.id || null,
@@ -292,6 +296,7 @@ function embeddedVacationFormTemplate() {
   const periodMin = minStartDateForType(selectedType);
   const minStartDate = vacation?.start_date || defaults.start_date || periodMin;
   const derivedDefaults = startDate && endDate ? calculateVacationDerived(startDate, endDate) : {};
+  const returnDateValue = vacation?.return_date || (derivedDefaults.returnDate ? toDateInput(derivedDefaults.returnDate) : "");
 
   return `
     <section class="dashboard-card embedded-vacation-panel">
@@ -304,7 +309,6 @@ function embeddedVacationFormTemplate() {
       </div>
       <form id="embeddedVacationForm" class="embedded-vacation-form full-vacation-form">
         <input type="hidden" name="id" value="${vacation?.id || ""}">
-        <input type="hidden" name="return_date" value="${vacation?.return_date || (derivedDefaults.returnDate ? toDateInput(derivedDefaults.returnDate) : "")}">
         <input type="hidden" name="days" value="${vacation?.days || derivedDefaults.days || ""}">
         <input type="hidden" name="month" value="${currentMonth}">
         ${collaboratorSearchField(people, selectedPerson?.id || "")}
@@ -315,7 +319,7 @@ function embeddedVacationFormTemplate() {
         <label>Fecha inicio<input name="start_date" type="date" min="${minStartDate}" value="${startDate}" required></label>
         <label>Fecha fin<input name="end_date" type="date" min="${minStartDate}" value="${endDate}" required></label>
         <label>Mes<input data-auto-month value="${monthText(currentMonth)}" readonly></label>
-        <label>Retorno<input data-auto-return value="${dateText(vacation?.return_date || derivedDefaults.returnDate) || "-"}" readonly></label>
+        <label>Retorno<input name="return_date" data-auto-return type="date" value="${returnDateValue}" required></label>
         <label>Días<input data-auto-days value="${vacation?.days || derivedDefaults.days || "-"}" readonly></label>
         <label>Estado<select name="status_edit">${["Pendiente", "Completado", "Reprogramado", "Observado"].map((status) => `<option value="${status}" ${(vacation?.status || defaults.status || "Pendiente") === status ? "selected" : ""}>${status}</option>`).join("")}</select></label>
         <label>Correo<select name="email_status">${["pendiente", "si", "no"].map((status) => `<option value="${status}" ${getEmailStatus(vacation) === status ? "selected" : ""}>${emailStatusDisplay(status)}</option>`).join("")}</select></label>
@@ -549,7 +553,7 @@ export function syncEmbeddedVacationDerivedFields() {
   const returnLabel = form.querySelector("[data-auto-return]");
   const daysLabel = form.querySelector("[data-auto-days]");
   const monthLabelEl = form.querySelector("[data-auto-month]");
-  if (returnLabel) returnLabel.value = dateText(derived.returnDate) || "-";
+  if (returnLabel) returnLabel.value = derived.returnDate ? toDateInput(derived.returnDate) : "";
   if (daysLabel) daysLabel.value = derived.days || "-";
   if (monthLabelEl) monthLabelEl.value = monthText(form.elements.month.value);
 }
