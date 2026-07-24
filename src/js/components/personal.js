@@ -1,5 +1,5 @@
 import { state, isUuid } from "../state.js";
-import { safeCell, dateText, numberText, normalizeKey, normalizeName, normalizePersonDisplayName, normalizeExcelDate, normalizeStatus, fallbackEmail, toDateInput, personInitials, svgIcon, inputField, selectField, monthName } from "../utils.js";
+import { safeCell, dateText, numberText, normalizeKey, normalizeName, normalizePersonDisplayName, normalizeExcelDate, normalizeStatus, fallbackEmail, toDateInput, personInitials, svgIcon, monthName } from "../utils.js";
 import { visiblePersonal, userName, activePeriod, canCurrentUserWriteVacations, periodStatusLabel, currentMonthValue, nextMonthValue, operationalMonthValue, vacationMinMonthValue, minStartDateForType } from "./common.js";
 import { persist, updateRecord, upsertPersonalRows, loadData, batchUpsertImportRows, batchMarkMissingPersonal } from "../db.js";
 import { notify, confirmAction, promptAction } from "../ui.js";
@@ -179,9 +179,6 @@ function groupPoFocalName(person) {
 }
 
 export function personalFormTemplate(person = null) {
-  const focalOptions = state.currentUser.role === "admin"
-    ? state.users.filter((u) => u.role === "focal").map((u) => [u.id, u.name])
-    : [[state.currentUser.id, state.currentUser.name]];
   const excelFields = editablePersonalExcelFields(person);
   return `
     <form id="personalForm" class="form-grid modal-form">
@@ -193,17 +190,6 @@ export function personalFormTemplate(person = null) {
         </div>
         <button class="ghost-btn compact-btn" id="closePersonalDialogBtn" type="button">Cerrar</button>
       </div>
-      ${inputField("name", "Nombre del colaborador", "text", person?.name)}
-      ${inputField("email", "Correo", "email", person?.email)}
-      ${inputField("service_start_date", "Fecha de ingreso", "date", person?.service_start_date)}
-      ${inputField("current_vacation_days", "Vacaciones vigentes", "number", person?.current_vacation_days)}
-      ${inputField("current_vacation_due_date", "Fecha máxima de uso", "date", person?.current_vacation_due_date)}
-      ${inputField("truncated_vacation_days", "Vacaciones truncas", "number", person?.truncated_vacation_days)}
-      ${inputField("truncated_to_current_date", "Truncas pasan a vigentes", "date", person?.truncated_to_current_date)}
-      ${inputField("po", "PO", "text", person?.po)}
-      ${inputField("project", "Proyecto/Squad", "text", person?.project)}
-      ${selectField("focal_user_id", "Focal asignado", focalOptions, person?.focal_user_id || state.currentUser.id)}
-      ${selectField("status", "Estado", ["activo", "inactivo"], person?.status || "activo")}
       ${excelFields.map(personalExcelEditField).join("")}
       <div class="modal-actions span-4">
         <button class="ghost-btn compact-btn" id="cancelPersonalBtn" type="button">Cancelar</button>
@@ -241,7 +227,7 @@ function editablePersonalExcelFields(person) {
         header,
         label: column.display_name || header,
         type: ["date", "number", "email"].includes(column.data_type) ? column.data_type : "text",
-        value: personalExcelFormValue(excelRawValue(person, header), column.data_type)
+        value: personalExcelFormValue(excelFieldValue(person || {}, column.display_name || header), column.data_type)
       };
     });
 }
@@ -292,13 +278,28 @@ function syncPersonalExcelFields(row) {
       ? Number(value || 0)
       : String(value).trim();
   }
+
+  const fieldByHeader = (...headers) => {
+    const normalized = headers.map(normalizeKey);
+    const key = Object.keys(row.excel_fields).find((header) => normalized.includes(normalizeKey(header)));
+    return key ? row.excel_fields[key] : undefined;
+  };
+  const serviceStart = fieldByHeader("FECHA ING INDRA", "FECHA ING BCP");
+  const email = fieldByHeader("Mail Indra", "Mail BCP", "Correo", "Email");
+  const status = fieldByHeader("Estado Junio", "Estado");
+  const focalName = fieldByHeader("FOCAL");
+  if (serviceStart !== undefined) row.service_start_date = normalizeAssignedExcelDate(serviceStart);
+  if (email !== undefined && String(email).trim()) row.email = String(email).trim().toLowerCase();
+  if (status !== undefined) row.status = normalizeStatus(status);
+  if (focalName !== undefined && state.currentUser.role !== "focal") {
+    const focal = state.users.find((user) => user.role === "focal" && normalizeKey(user.name) === normalizeKey(focalName));
+    if (focal) row.focal_user_id = focal.id;
+  }
 }
 
 async function savePersonal(event) {
   event.preventDefault();
   const form = Object.fromEntries(new FormData(event.currentTarget).entries());
-  if (!form.name?.trim()) return notify("Ingresa el nombre del colaborador.");
-  if (!form.email?.trim()) return notify("Ingresa el correo del colaborador.");
   const id = form.id;
   const existing = id ? state.personal.find((person) => person.id === id) : null;
   if (state.currentUser.role === "focal" && existing && existing.focal_user_id !== state.currentUser.id) return notify("No puedes editar colaboradores de otro focal.");
@@ -307,20 +308,22 @@ async function savePersonal(event) {
     excelFields[field.header] = normalizePersonalFormValue(form[`excel_field_${index}`], field.type);
   });
   const row = {
-    name: form.name.trim(),
-    email: form.email.trim().toLowerCase(),
-    focal_user_id: state.currentUser.role === "focal" ? state.currentUser.id : form.focal_user_id,
-    po: form.po,
-    project: form.project,
-    service_start_date: form.service_start_date,
-    current_vacation_days: Number(form.current_vacation_days || 0),
-    current_vacation_due_date: form.current_vacation_due_date,
-    truncated_vacation_days: Number(form.truncated_vacation_days || 0),
-    truncated_to_current_date: form.truncated_to_current_date,
-    status: form.status,
+    name: existing?.name || "",
+    email: existing?.email || "",
+    focal_user_id: state.currentUser.role === "focal" ? state.currentUser.id : (existing?.focal_user_id || null),
+    po: existing?.po || "",
+    project: existing?.project || "",
+    service_start_date: existing?.service_start_date || "",
+    current_vacation_days: Number(existing?.current_vacation_days || 0),
+    current_vacation_due_date: existing?.current_vacation_due_date || "",
+    truncated_vacation_days: Number(existing?.truncated_vacation_days || 0),
+    truncated_to_current_date: existing?.truncated_to_current_date || "",
+    status: existing?.status || "activo",
     excel_fields: excelFields
   };
   syncPersonalExcelFields(row);
+  if (!row.name?.trim()) return notify("Ingresa el nombre del colaborador.");
+  if (!row.email) row.email = fallbackEmail(row.name, excelFields);
   if (id) {
     await updateRecord("personal", id, { ...row, updated_at: new Date().toISOString() });
     notify("Colaborador actualizado.");
