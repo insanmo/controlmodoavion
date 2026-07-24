@@ -204,13 +204,7 @@ export function personalFormTemplate(person = null) {
       ${inputField("project", "Proyecto/Squad", "text", person?.project)}
       ${selectField("focal_user_id", "Focal asignado", focalOptions, person?.focal_user_id || state.currentUser.id)}
       ${selectField("status", "Estado", ["activo", "inactivo"], person?.status || "activo")}
-      ${excelFields.length ? `
-        <div class="span-4 personal-form-section">
-          <h4>Campos visibles del archivo cargado</h4>
-          <p>Estos son los mismos campos configurados para mostrarse en la tabla de Personal asignado.</p>
-        </div>
-        ${excelFields.map(personalExcelEditField).join("")}
-      ` : ""}
+      ${excelFields.map(personalExcelEditField).join("")}
       <div class="modal-actions span-4">
         <button class="ghost-btn compact-btn" id="cancelPersonalBtn" type="button">Cancelar</button>
         <button class="primary-btn compact-btn" type="submit">Guardar colaborador</button>
