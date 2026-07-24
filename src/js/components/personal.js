@@ -182,6 +182,7 @@ export function personalFormTemplate(person = null) {
   const focalOptions = state.currentUser.role === "admin"
     ? state.users.filter((u) => u.role === "focal").map((u) => [u.id, u.name])
     : [[state.currentUser.id, state.currentUser.name]];
+  const excelFields = editablePersonalExcelFields(person);
   return `
     <form id="personalForm" class="form-grid modal-form">
       <input type="hidden" name="id" value="${person?.id || ""}">
@@ -203,6 +204,13 @@ export function personalFormTemplate(person = null) {
       ${inputField("project", "Proyecto/Squad", "text", person?.project)}
       ${selectField("focal_user_id", "Focal asignado", focalOptions, person?.focal_user_id || state.currentUser.id)}
       ${selectField("status", "Estado", ["activo", "inactivo"], person?.status || "activo")}
+      ${excelFields.length ? `
+        <div class="span-4 personal-form-section">
+          <h4>Campos visibles del archivo cargado</h4>
+          <p>Estos son los mismos campos configurados para mostrarse en la tabla de Personal asignado.</p>
+        </div>
+        ${excelFields.map(personalExcelEditField).join("")}
+      ` : ""}
       <div class="modal-actions span-4">
         <button class="ghost-btn compact-btn" id="cancelPersonalBtn" type="button">Cancelar</button>
         <button class="primary-btn compact-btn" type="submit">Guardar colaborador</button>
@@ -230,6 +238,68 @@ export function closePersonalDialog() {
   document.getElementById("personalDialog").close();
 }
 
+function editablePersonalExcelFields(person) {
+  return effectiveColumnConfigs()
+    .filter((column) => column.show_in_personal !== false && column.load_to_db !== false)
+    .map((column) => {
+      const header = column.excel_header;
+      return {
+        header,
+        label: column.display_name || header,
+        type: ["date", "number", "email"].includes(column.data_type) ? column.data_type : "text",
+        value: personalExcelFormValue(excelRawValue(person, header), column.data_type)
+      };
+    });
+}
+
+function personalExcelEditField(field, index) {
+  const step = field.type === "number" ? ' step="any"' : "";
+  return `<label>${safeCell(field.label)}<input name="excel_field_${index}" type="${field.type}" value="${safeCell(field.value)}"${step}></label>`;
+}
+
+function personalExcelFormValue(value, type) {
+  if (value === null || value === undefined) return "";
+  if (type === "date") return normalizeAssignedExcelDate(value);
+  return value;
+}
+
+function normalizePersonalFormValue(value, type) {
+  if (type === "number") {
+    if (String(value ?? "").trim() === "") return "";
+    const parsed = Number(String(value).replace(",", "."));
+    return Number.isFinite(parsed) ? parsed : value;
+  }
+  return String(value ?? "").trim();
+}
+
+function syncPersonalExcelFields(row) {
+  const valueForRole = (role) => {
+    const column = effectiveColumnConfigs().find((item) => item.calculation_role === role);
+    return column ? row.excel_fields[column.excel_header] : undefined;
+  };
+  const usuario = valueForRole("identity_usuario");
+  const matric = valueForRole("identity_matric_bcp");
+  if (usuario !== undefined) row.usuario_code = String(usuario || "").trim();
+  if (matric !== undefined) row.matric_bcp = String(matric || "").trim();
+
+  const mapped = {
+    name: "name",
+    po: "po",
+    project: "project",
+    current_days: "current_vacation_days",
+    current_due_date: "current_vacation_due_date",
+    truncated_days: "truncated_vacation_days",
+    truncated_to_current_date: "truncated_to_current_date"
+  };
+  for (const [role, property] of Object.entries(mapped)) {
+    const value = valueForRole(role);
+    if (value === undefined || value === "") continue;
+    row[property] = ["current_vacation_days", "truncated_vacation_days"].includes(property)
+      ? Number(value || 0)
+      : String(value).trim();
+  }
+}
+
 async function savePersonal(event) {
   event.preventDefault();
   const form = Object.fromEntries(new FormData(event.currentTarget).entries());
@@ -238,6 +308,10 @@ async function savePersonal(event) {
   const id = form.id;
   const existing = id ? state.personal.find((person) => person.id === id) : null;
   if (state.currentUser.role === "focal" && existing && existing.focal_user_id !== state.currentUser.id) return notify("No puedes editar colaboradores de otro focal.");
+  const excelFields = { ...(existing?.excel_fields && typeof existing.excel_fields === "object" ? existing.excel_fields : {}) };
+  editablePersonalExcelFields(existing).forEach((field, index) => {
+    excelFields[field.header] = normalizePersonalFormValue(form[`excel_field_${index}`], field.type);
+  });
   const row = {
     name: form.name.trim(),
     email: form.email.trim().toLowerCase(),
@@ -249,8 +323,10 @@ async function savePersonal(event) {
     current_vacation_due_date: form.current_vacation_due_date,
     truncated_vacation_days: Number(form.truncated_vacation_days || 0),
     truncated_to_current_date: form.truncated_to_current_date,
-    status: form.status
+    status: form.status,
+    excel_fields: excelFields
   };
+  syncPersonalExcelFields(row);
   if (id) {
     await updateRecord("personal", id, { ...row, updated_at: new Date().toISOString() });
     notify("Colaborador actualizado.");
