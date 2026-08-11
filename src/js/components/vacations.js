@@ -7,9 +7,10 @@ import { persist, updateRecord, deleteRecord } from "../db.js";
 import { notify, confirmAction } from "../ui.js";
 
 export function renderVacationForm(content) {
-  const rows = filteredVacations();
+  const month = state.filters.month || toMonth(new Date());
+  const rows = filteredVacations({ includeHistorical: true, month });
   content.innerHTML = `
-    ${filterToolbar({ hideExport: state.currentUser.role === "supervisor" })}
+    ${filterToolbar({ forceMonth: month, hideExport: state.currentUser.role === "supervisor" })}
     ${state.showVacationForm ? embeddedVacationFormTemplate() : ""}
     <section class="dashboard-card vacation-list-card">
       <div class="vacation-list-header">
@@ -25,7 +26,11 @@ export function renderConsolidated(content) {
   if (state.currentUser.role === "supervisor" && !state.filters.status) {
     state.filters.status = "Completado";
   }
-  const rows = filteredVacations({ includeHistorical: true });
+  const rows = filteredVacations({
+    includeHistorical: true,
+    month: state.filters.month || "",
+    applyPeriodFilter: true
+  });
   content.innerHTML = `
     ${filterToolbar({ showPeriod: true, allowEmptyMonth: true })}
     ${state.showVacationForm ? embeddedVacationFormTemplate() : ""}
@@ -248,7 +253,12 @@ export function exportExcel() {
     return notify("La librería de exportación aún no está cargada. Verifica la conexión a internet y vuelve a intentar.");
   }
   const usageMap = vacationTruncasUsageMap();
-  const rows = filteredVacations({ includeHistorical: true }).map((item) => {
+  const month = state.filters.month || (state.activeTab === "consolidated" ? "" : toMonth(new Date()));
+  const rows = filteredVacations({
+    includeHistorical: true,
+    month,
+    applyPeriodFilter: state.activeTab === "consolidated"
+  }).map((item) => {
     const usage = usageFor(item, usageMap);
     return {
       Colaborador: collaboratorName(item.collaborator_id),

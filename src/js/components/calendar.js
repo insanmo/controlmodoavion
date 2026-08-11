@@ -9,7 +9,8 @@ export function renderCalendar(content) {
   const first = new Date(year, monthIndex - 1, 1);
   const days = new Date(year, monthIndex, 0).getDate();
   const offset = (first.getDay() + 6) % 7;
-  const vacations = filteredVacations().filter((item) => item.start_date && item.end_date && overlapsMonth(item, month));
+  const vacations = filteredVacations({ includeHistorical: true, month })
+    .filter((item) => item.start_date && item.end_date);
   let cells = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((day) => `<div class="day-name">${day}</div>`).join("");
   for (let i = 0; i < offset; i++) cells += `<div class="day-cell"></div>`;
   for (let day = 1; day <= days; day++) {
@@ -43,10 +44,6 @@ export function shiftCalendarMonth(delta) {
 
 function renderActiveTabInternal() {
   import("../app-core.js").then((mod) => mod.renderActiveTab());
-}
-
-function overlapsMonth(item, month) {
-  return item.start_date <= `${month}-31` && item.end_date >= `${month}-01`;
 }
 
 function uniqueCalendarEvents(events) {

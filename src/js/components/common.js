@@ -136,10 +136,12 @@ export function filterToolbar(options = {}) {
 export function filteredVacations(options = {}) {
   const collaboratorText = String(state.filters.collaboratorText || "").toLowerCase();
   const projectText = String(state.filters.project || "").toLowerCase();
+  const month = options.month ?? state.filters.month ?? "";
+  const applyPeriodFilter = Boolean(options.applyPeriodFilter);
   return visibleVacations({ includeHistorical: options.includeHistorical }).filter((item) => {
     const person = state.personal.find((row) => row.id === item.collaborator_id);
-    if (state.filters.period && item.period_id !== state.filters.period) return false;
-    if (state.filters.month && item.month !== state.filters.month && !overlapsMonth(item, state.filters.month)) return false;
+    if (applyPeriodFilter && state.filters.period && item.period_id !== state.filters.period) return false;
+    if (month && !overlapsMonth(item, month)) return false;
     if (state.filters.focal && item.focal_user_id !== state.filters.focal) return false;
     if (state.filters.po && !String(item.po || "").toLowerCase().includes(String(state.filters.po).toLowerCase())) return false;
     if (projectText && !String(item.project || "").toLowerCase().includes(projectText)) return false;
