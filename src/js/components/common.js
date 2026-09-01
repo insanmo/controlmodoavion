@@ -2,6 +2,7 @@ import { state } from "../state.js";
 import { safeCell, dateText, titleText, slug, svgIcon, normalizeKey } from "../utils.js";
 
 const MARCHA_BLANCA_OPERATIONAL_MONTH = "2026-07";
+export const VACATION_UPDATE_CUTOFF_DAY = 10;
 
 export function visiblePersonal() {
   const rows = state.personal.filter((person) => person.status !== "inactivo" && !person.missing_from_latest_import);
@@ -52,6 +53,27 @@ export function minStartDateForType(type) {
   const vacationTypes = ["vacaciones", "otro"];
   const base = vacationTypes.includes(type) ? vacationMinMonthValue() : operationalMonthValue();
   return `${base}-01`;
+}
+
+export function canUpdateVacationRecord(vacation, today = new Date()) {
+  if (!vacation) return false;
+  const recordMonth = String(vacation.month || vacation.start_date || "").slice(0, 7);
+  if (!recordMonth) return false;
+  if (recordMonth >= vacationMinMonthValue()) return true;
+  const operationalMonth = operationalMonthValue();
+  const todayMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+  return recordMonth === operationalMonth
+    && todayMonth === operationalMonth
+    && today.getDate() <= VACATION_UPDATE_CUTOFF_DAY;
+}
+
+export function minStartDateForVacationEdit(vacation, today = new Date()) {
+  if (!vacation) return minStartDateForType("vacaciones");
+  const recordMonth = String(vacation.month || vacation.start_date || "").slice(0, 7);
+  if (canUpdateVacationRecord(vacation, today) && recordMonth === operationalMonthValue()) {
+    return `${recordMonth}-01`;
+  }
+  return vacation.start_date || minStartDateForType(vacation.type);
 }
 
 export function visibleVacations(options = {}) {

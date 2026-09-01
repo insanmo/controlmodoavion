@@ -1,6 +1,6 @@
 import { state } from "../state.js";
 import { safeCell, dateText, dateTimeText, monthLabel, monthName, titleText, slug, personInitials, svgIcon, toDateInput, normalizeKey, calculateVacationDerived } from "../utils.js";
-import { visiblePersonal, collaboratorName, userName, emailStatusLabel, getEmailStatus, filteredVacations, activePeriod, canCurrentUserWriteVacations, minStartDateForType, operationalMonthValue, vacationMinMonthValue } from "./common.js";
+import { visiblePersonal, collaboratorName, userName, emailStatusLabel, getEmailStatus, filteredVacations, activePeriod, canCurrentUserWriteVacations, minStartDateForType, minStartDateForVacationEdit, canUpdateVacationRecord, VACATION_UPDATE_CUTOFF_DAY, operationalMonthValue, vacationMinMonthValue } from "./common.js";
 import { filterToolbar } from "./common.js";
 import { collaboratorColorIndex, calculateVacationBalance, vacationTruncasUsageMap } from "./dashboard.js";
 import { persist, updateRecord, deleteRecord } from "../db.js";
@@ -55,6 +55,9 @@ export async function saveVacation(event) {
   const form = new FormData(event.currentTarget);
   const id = form.get("id");
   const existingVacation = id ? state.vacations.find((item) => item.id === id) : null;
+  if (existingVacation && !canUpdateVacationRecord(existingVacation)) {
+    return notify(`Los registros del mes operativo solo pueden actualizarse hasta el día ${VACATION_UPDATE_CUTOFF_DAY}. Los registros de meses futuros permanecen editables.`);
+  }
   const person = state.personal.find((item) => item.id === form.get("collaborator_id"));
   if (!person) return notify("Selecciona un colaborador.");
   if (state.currentUser.role === "focal" && person.focal_user_id !== state.currentUser.id) return notify("No puedes registrar vacaciones de otro equipo.");
@@ -312,7 +315,7 @@ function embeddedVacationFormTemplate() {
   const currentMonth = startDate ? startDate.slice(0, 7) : "";
   const selectedType = vacation?.type || defaults.type || "vacaciones";
   const periodMin = minStartDateForType(selectedType);
-  const minStartDate = vacation?.start_date || defaults.start_date || periodMin;
+  const minStartDate = vacation ? minStartDateForVacationEdit(vacation) : (defaults.start_date || periodMin);
   const derivedDefaults = startDate && endDate ? calculateVacationDerived(startDate, endDate) : {};
   const returnDateValue = vacation?.return_date || (derivedDefaults.returnDate ? toDateInput(derivedDefaults.returnDate) : "");
 
@@ -560,7 +563,9 @@ export function syncEmbeddedVacationDerivedFields() {
   const form = document.getElementById("embeddedVacationForm");
   if (!form) return;
   const type = form.elements.type?.value;
-  const typeMin = minStartDateForType(type);
+  const existingId = form.elements.id?.value;
+  const existingVacation = existingId ? state.vacations.find((item) => item.id === existingId) : null;
+  const typeMin = existingVacation ? minStartDateForVacationEdit(existingVacation) : minStartDateForType(type);
   if (form.elements.start_date) form.elements.start_date.min = typeMin;
   const start = form.elements.start_date?.value;
   const end = form.elements.end_date?.value;
@@ -617,7 +622,7 @@ function vacationTable(rows, options = {}) {
         <td>${safeCell(item.notes || "")}</td>
         <td>${formalStatusCell(item, usage)}</td>
         <td>${dateTimeText(item.updated_at)}</td>
-        ${options.actions ? `<td><div class="table-action-buttons"><button class="edit-square" data-edit-vacation="${item.id}" type="button">${svgIcon("edit")}</button><button class="delete-square" data-delete-vacation="${item.id}" type="button">${svgIcon("trash")}</button></div></td>` : ""}
+        ${options.actions ? `<td><div class="table-action-buttons"><button class="edit-square" data-edit-vacation="${item.id}" type="button" ${canUpdateVacationRecord(item) ? "" : `disabled title="Editable hasta el día ${VACATION_UPDATE_CUTOFF_DAY} del mes operativo"`}>${svgIcon("edit")}</button><button class="delete-square" data-delete-vacation="${item.id}" type="button">${svgIcon("trash")}</button></div></td>` : ""}
       </tr>
     `;
   }).join("");
