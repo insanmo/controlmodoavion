@@ -374,7 +374,7 @@ export async function importPersonalFromExcel(event) {
       const person = excelPersonFromRowObject(filteredRaw, index, usersByFocalName);
       const warnings = identityWarnings(person);
       const existing = findExistingPersonal(person);
-      if (existing && isUuid(existing.id)) person.id = existing.id;
+      person.id = existing && isUuid(existing.id) ? existing.id : crypto.randomUUID();
       if (!state.users.some((user) => user.id === person.focal_user_id)) {
         person.focal_user_id = (state.currentUser.role === "focal" ? state.currentUser : focals[0])?.id || null;
       }

@@ -644,8 +644,22 @@ async function batchUpsert(db: ReturnType<typeof createClient>, user: Record<str
   }
   for (const row of rows) normalizeNullableUuidFields(row);
 
-  const { error } = await db.from(table).upsert(rows);
-  if (error) return json({ error: error.message }, 500);
+  // PostgREST normalizes an array payload to a common set of columns. When a
+  // batch mixes rows with an id and rows that omit it, the latter can become
+  // `id: null` instead of using the database default. Keep both shapes in
+  // separate writes so generated primary keys continue to work.
+  const rowsWithId = rows.filter((row) => row.id !== undefined && row.id !== null && row.id !== "");
+  const rowsWithoutId = rows.filter((row) => row.id === undefined || row.id === null || row.id === "");
+
+  if (rowsWithId.length) {
+    const { error } = await db.from(table).upsert(rowsWithId);
+    if (error) return json({ error: error.message }, 500);
+  }
+  if (rowsWithoutId.length) {
+    const insertRows = rowsWithoutId.map(({ id: _id, ...row }) => row);
+    const { error } = await db.from(table).insert(insertRows);
+    if (error) return json({ error: error.message }, 500);
+  }
 
   await db.from("aircontrol_audit_log").insert({
     user_id: user.id, action: "batchUpsert", entity: name,
