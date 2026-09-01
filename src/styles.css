@@ -2979,9 +2979,11 @@ body {
   position: sticky;
   right: 0;
   z-index: 10;
-  width: 252px;
-  min-width: 252px;
-  max-width: 252px;
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+  padding-left: 6px;
+  padding-right: 6px;
   background: var(--white);
   box-shadow: -1px 0 0 #d9e2ec;
 }
@@ -2989,7 +2991,14 @@ body {
 .excel-personal-table-wrap.has-actions .personal-row-actions {
   width: 100%;
   min-width: max-content;
-  justify-content: space-between;
+  gap: 4px;
+  justify-content: flex-start;
+}
+
+.excel-personal-table-wrap.has-actions .personal-row-actions .compact-btn {
+  min-height: 30px;
+  padding: 5px 6px;
+  font-size: 0.76rem;
 }
 .excel-personal-table-wrap.has-actions thead th:last-child {
   z-index: 40;
