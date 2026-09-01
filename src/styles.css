@@ -2979,8 +2979,17 @@ body {
   position: sticky;
   right: 0;
   z-index: 10;
+  width: 252px;
+  min-width: 252px;
+  max-width: 252px;
   background: var(--white);
   box-shadow: -1px 0 0 #d9e2ec;
+}
+
+.excel-personal-table-wrap.has-actions .personal-row-actions {
+  width: 100%;
+  min-width: max-content;
+  justify-content: space-between;
 }
 .excel-personal-table-wrap.has-actions thead th:last-child {
   z-index: 40;
