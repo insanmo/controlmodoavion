@@ -6,7 +6,7 @@ import { initStorage, restoreSession, onLogin, onForgotPassword, saveNewPassword
 import { renderFocalCommand, flushPoclacDraft, setRenderActiveTab } from "./components/focal-command.js";
 import { dashboardTemplate } from "./components/dashboard.js";
 import { renderVacationForm, renderConsolidated, saveVacation, removeVacation, markFormalRegistered, openDetail, exportExcel, bindCollaboratorSearch, syncEmbeddedVacationDerivedFields } from "./components/vacations.js";
-import { renderPersonal, openPersonalDialog, importPersonalFromExcel, exportPersonalExcel, sortPersonalBy, startPeriodClose, activateNextPeriod, reopenPeriod } from "./components/personal.js";
+import { renderPersonal, openPersonalDialog, removePersonal, importPersonalFromExcel, exportPersonalExcel, sortPersonalBy, startPeriodClose, activateNextPeriod, reopenPeriod } from "./components/personal.js";
 import { minStartDateForType } from "./components/common.js";
 import { renderCalendar, shiftCalendarMonth } from "./components/calendar.js";
 import { renderUsers, saveUser, resetUserPassword, sortUsersBy, editUser, cancelUserEdit, toggleUserActive, removeUser } from "./components/users.js";
@@ -319,6 +319,7 @@ function bindDynamicEvents() {
     renderApp();
   }));
   document.querySelectorAll("[data-edit-personal]").forEach((btn) => btn.addEventListener("click", () => openPersonalDialog(btn.dataset.editPersonal)));
+  document.querySelectorAll("[data-delete-personal]").forEach((btn) => btn.addEventListener("click", () => removePersonal(btn.dataset.deletePersonal)));
   document.querySelectorAll("[data-register-vacation]").forEach((btn) => btn.addEventListener("click", () => startVacationForPerson(btn.dataset.registerVacation)));
   document.querySelectorAll("[data-register-birthday-rest]").forEach((btn) => btn.addEventListener("click", () => startVacationForPerson(btn.dataset.registerBirthdayRest, {
     type: "tarde libre",

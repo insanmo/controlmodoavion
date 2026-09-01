@@ -1,7 +1,7 @@
 import { state, isUuid } from "../state.js";
 import { safeCell, dateText, numberText, normalizeKey, normalizeName, normalizePersonDisplayName, normalizeExcelDate, normalizeStatus, fallbackEmail, toDateInput, personInitials, svgIcon, monthName } from "../utils.js";
 import { visiblePersonal, userName, activePeriod, canCurrentUserWriteVacations, periodStatusLabel, currentMonthValue, nextMonthValue, operationalMonthValue, vacationMinMonthValue, minStartDateForType } from "./common.js";
-import { persist, updateRecord, upsertPersonalRows, loadData, batchUpsertImportRows, batchMarkMissingPersonal } from "../db.js";
+import { persist, updateRecord, deleteRecord, upsertPersonalRows, loadData, batchUpsertImportRows, batchMarkMissingPersonal } from "../db.js";
 import { notify, confirmAction, promptAction } from "../ui.js";
 
 export function renderPersonal(content) {
@@ -34,7 +34,7 @@ export function renderPersonal(content) {
         <span class="legend-item"><span class="legend-swatch legend-warning"></span> Vence en ≤ 4 meses</span>
         <span class="legend-item"><span class="legend-swatch legend-birthday"></span> Cumplea&ntilde;os (d&iacute;a h&aacute;bil)</span>
       </div>
-      ${personalTable(rows, canEditRows)}
+      ${personalTable(rows, canEditRows, canManagePersonal)}
     </section>
   `;
 }
@@ -83,7 +83,7 @@ function filteredPersonalRows(rows) {
   });
 }
 
-function personalTable(rows, canEdit) {
+function personalTable(rows, canEdit, canDelete) {
   const headers = assignedExcelHeaders();
   const nameIndex = headers.findIndex((header) => normalizeKey(sourceHeaderForDisplay(header)) === "nombre" || normalizeKey(sourceHeaderForDisplay(header)) === "tm" || normalizeKey(header) === "nombre");
   const stickyEnd = nameIndex >= 0 ? nameIndex : -1;
@@ -137,7 +137,7 @@ function personalTable(rows, canEdit) {
             ${poGroups[po].map((item) => `
               <tr class="${personalDueRowClass(item)}">
                 ${headers.map((header, index) => bodyCell(item, header, index)).join("")}
-                <td><div class="personal-row-actions"><button class="primary-btn compact-btn" data-register-vacation="${item.id}" type="button" ${canCurrentUserWriteVacations() ? "" : "disabled"}>Vacaciones</button>${canEdit ? `<button class="ghost-btn compact-btn" data-edit-personal="${item.id}" type="button">Editar</button>` : ""}</div></td>
+                <td><div class="personal-row-actions"><button class="primary-btn compact-btn" data-register-vacation="${item.id}" type="button" ${canCurrentUserWriteVacations() ? "" : "disabled"}>Vacaciones</button>${canEdit ? `<button class="ghost-btn compact-btn" data-edit-personal="${item.id}" type="button">Editar</button>` : ""}${canDelete ? `<button class="danger-btn compact-btn" data-delete-personal="${item.id}" type="button">Eliminar</button>` : ""}</div></td>
               </tr>
             `).join("")}
           `).join("") : `<tr><td colspan="${headers.length + 1}">Sin personal asignado.</td></tr>`}
@@ -336,6 +336,22 @@ async function savePersonal(event) {
   renderApp();
 }
 
+export async function removePersonal(id) {
+  if (!['admin', 'supervisor'].includes(state.currentUser.role)) return notify("Solo supervisor o admin pueden eliminar colaboradores.");
+  const person = state.personal.find((item) => item.id === id);
+  if (!person) return notify("No se encontró el colaborador.");
+  const displayName = String(person.name || "").trim() || "este registro sin nombre";
+  const confirmed = await confirmAction(
+    `¿Eliminar a ${displayName} del personal asignado? Dejará de aparecer en los listados, pero se conservará su historial de vacaciones.`,
+    { title: "Eliminar colaborador", confirmText: "Eliminar" }
+  );
+  if (!confirmed) return;
+  await deleteRecord("personal", id);
+  await notify("Colaborador eliminado del personal asignado.");
+  const { renderApp } = await import("../app-core.js");
+  renderApp();
+}
+
 export async function importPersonalFromExcel(event) {
   const file = event.target.files?.[0];
   event.target.value = "";
@@ -350,9 +366,12 @@ export async function importPersonalFromExcel(event) {
     const book = XLSX.read(buffer, { type: "array", cellDates: true });
     state.importedFocalCredentials = [];
     const sheetName = book.SheetNames.find((name) => normalizeKey(name) === "total") || book.SheetNames[0];
-    const rows = XLSX.utils.sheet_to_json(book.Sheets[sheetName], { defval: "" });
-    if (!rows.length) { hideLoadingOverlay(); await notify("El archivo no contiene registros."); return; }
-    const headers = Object.keys(rows[0]);
+    const sourceRows = XLSX.utils.sheet_to_json(book.Sheets[sheetName], { defval: "" });
+    if (!sourceRows.length) { hideLoadingOverlay(); await notify("El archivo no contiene registros."); return; }
+    const headers = Object.keys(sourceRows[0]);
+    const rows = sourceRows.filter(isImportablePersonalRow);
+    const skippedRows = sourceRows.length - rows.length;
+    if (!rows.length) { hideLoadingOverlay(); await notify("El archivo no contiene colaboradores con nombre."); return; }
     const configs = effectiveColumnConfigs(headers);
     const loadableHeaders = configs
       .filter((column) => column.load_to_db !== false || String(column.calculation_role || "").startsWith("identity_") || ["name", "focal", "po", "project"].includes(column.calculation_role))
@@ -437,11 +456,12 @@ export async function importPersonalFromExcel(event) {
     const focalText = createdFocals.length
       ? ` Se crearon ${createdFocals.length} focales nuevos como usuarios AirControl; revisa Usuarios para resetear sus claves si necesitan ingresar.`
       : "";
+    const skippedText = skippedRows ? ` Se omitieron ${skippedRows} filas sin nombre de colaborador.` : "";
     state.importedFocalCredentials = [];
     hideLoadingOverlay();
     await notify(savedWithoutExcelFields
-      ? `${personal.length} colaboradores cargados desde la hoja ${sheetName}. Ojo: Supabase aun no tiene la columna excel_fields; ejecuta la migración nueva para persistir todas las columnas.${focalText}`
-      : `${personal.length} colaboradores cargados desde la hoja ${sheetName}. ${importRows.reduce((sum, row) => sum + row.warnings.length, 0)} advertencias.${focalText}`);
+      ? `${personal.length} colaboradores cargados desde la hoja ${sheetName}. Ojo: Supabase aun no tiene la columna excel_fields; ejecuta la migración nueva para persistir todas las columnas.${skippedText}${focalText}`
+      : `${personal.length} colaboradores cargados desde la hoja ${sheetName}. ${importRows.reduce((sum, row) => sum + row.warnings.length, 0)} advertencias.${skippedText}${focalText}`);
     const { renderApp } = await import("../app-core.js");
     renderApp();
   } catch (error) {
@@ -912,6 +932,10 @@ function normalizeAssignedExcelPersonRow(raw) {
     truncated_to_current_date: normalizeAssignedExcelDate(value("truncas_a_vigentes", "truncas_pasan_a_vigentes", "fecha_fin_acta", "fecha_nueva_fin_acta")),
     status: normalizeStatus(value("estado", "estado_junio"))
   };
+}
+
+export function isImportablePersonalRow(raw) {
+  return Boolean(normalizeAssignedExcelPersonRow(raw).name);
 }
 
 function numberFromExcel(value) {
