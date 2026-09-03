@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { state } from "../src/js/state.js";
 import { filteredVacations, visibleVacations } from "../src/js/components/common.js";
 import { renderCalendar } from "../src/js/components/calendar.js";
+import { toDateInput, toMonth } from "../src/js/utils.js";
 import { renderVacationForm } from "../src/js/components/vacations.js";
 import { calculateVacationBalance, effectiveVacationBalance, vacationDueBuckets } from "../src/js/components/dashboard.js";
 
@@ -108,6 +109,15 @@ test("Calendario de agosto renderiza vacaciones históricas", () => {
   const content = { innerHTML: "" };
   renderCalendar(content);
   assert.match(content.innerHTML, /Histórico Agosto/);
+});
+
+test("Calendario remarca automáticamente el día actual", () => {
+  const today = new Date();
+  state.filters.month = toMonth(today);
+  const content = { innerHTML: "" };
+  renderCalendar(content);
+  assert.match(content.innerHTML, new RegExp(`class="day-cell is-today" data-date="${toDateInput(today)}" aria-current="date"`));
+  assert.match(content.innerHTML, /class="today-label">Hoy</);
 });
 
 test("Una vacación activa de septiembre no aparece en agosto y sí en septiembre", () => {
