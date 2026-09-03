@@ -120,3 +120,14 @@ export async function batchMarkMissingPersonal(ids) {
     updated_at: new Date().toISOString()
   });
 }
+
+export async function reprogramVacationRecord(payload) {
+  const result = await state.store.api.reprogramVacation(payload);
+  await loadData(state.currentUser?.role);
+  return result;
+}
+
+export async function getVacationEvidenceUrl(vacationId) {
+  const result = await state.store.api.vacationEvidenceUrl(vacationId);
+  return result.url || "";
+}

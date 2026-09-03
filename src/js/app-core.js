@@ -5,7 +5,7 @@ import { loadData } from "./db.js";
 import { initStorage, restoreSession, onLogin, onForgotPassword, saveNewPassword, logout, toggleForgot, openChangePasswordDialog } from "./auth.js";
 import { renderFocalCommand, flushPoclacDraft, setRenderActiveTab } from "./components/focal-command.js";
 import { dashboardTemplate } from "./components/dashboard.js";
-import { renderVacationForm, renderConsolidated, saveVacation, removeVacation, markFormalRegistered, openDetail, exportExcel, bindCollaboratorSearch, syncEmbeddedVacationDerivedFields } from "./components/vacations.js";
+import { renderVacationForm, renderConsolidated, saveVacation, removeVacation, markFormalRegistered, openDetail, openReprogramDialog, exportExcel, bindCollaboratorSearch, syncEmbeddedVacationDerivedFields } from "./components/vacations.js";
 import { renderPersonal, openPersonalDialog, removePersonal, importPersonalFromExcel, exportPersonalExcel, sortPersonalBy, startPeriodClose, activateNextPeriod, reopenPeriod } from "./components/personal.js";
 import { minStartDateForType } from "./components/common.js";
 import { renderCalendar, shiftCalendarMonth } from "./components/calendar.js";
@@ -331,6 +331,7 @@ function bindDynamicEvents() {
     state.showVacationForm = true; state.editingVacationId = btn.dataset.editVacation; state.prefillVacationPersonId = null; state.prefillVacationDefaults = null; renderActiveTab();
   }));
   document.querySelectorAll("[data-delete-vacation]").forEach((btn) => btn.addEventListener("click", () => removeVacation(btn.dataset.deleteVacation)));
+  document.querySelectorAll("[data-reprogram-vacation]").forEach((btn) => btn.addEventListener("click", () => openReprogramDialog(btn.dataset.reprogramVacation)));
   document.querySelectorAll("[data-toggle-formal]").forEach((cb) => cb.addEventListener("change", () => markFormalRegistered(cb)));
   document.querySelectorAll("[data-detail]").forEach((btn) => { if (btn.dataset.detail) btn.addEventListener("click", () => openDetail(btn.dataset.detail)); });
   document.querySelectorAll("[data-resolve-request]").forEach((btn) => btn.addEventListener("click", () => resolveRequest(btn.dataset.resolveRequest)));

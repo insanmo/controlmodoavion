@@ -69,6 +69,19 @@ export function canUpdateVacationRecord(vacation, today = new Date()) {
     && today.getDate() <= VACATION_UPDATE_CUTOFF_DAY;
 }
 
+export function canReprogramVacationRecord(vacation, today = new Date()) {
+  if (!vacation || vacation.type !== "vacaciones" || vacation.reprogrammed_to_id || vacation.reprogrammed_from_id || vacation.status === "Reprogramado") return false;
+  const todayValue = `${currentMonthValue(today)}-${String(today.getDate()).padStart(2, "0")}`;
+  if (!vacation.end_date || vacation.end_date >= todayValue) return false;
+  if (["admin", "supervisor"].includes(state.currentUser?.role)) return true;
+  const person = state.personal.find((item) => item.id === vacation.collaborator_id);
+  if (state.currentUser?.role !== "focal" || !person || !personBelongsToCurrentFocal(person)) return false;
+  const period = activePeriod();
+  return period?.status === "abierto"
+    && currentMonthValue(today) === period.month
+    && today.getDate() <= VACATION_UPDATE_CUTOFF_DAY;
+}
+
 export function minStartDateForVacationEdit(vacation, today = new Date()) {
   if (!vacation) return minStartDateForType("vacaciones", today);
   const recordMonth = String(vacation.month || vacation.start_date || "").slice(0, 7);

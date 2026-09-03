@@ -273,3 +273,36 @@ test("El saldo efectivo actualiza por vencer, truncas y pendientes en Personal",
   assert.equal(balance.pending, 22.17);
   assert.equal(vacationDueBuckets([target], new Date("2026-09-03T12:00:00")).urgent.length, 0);
 });
+
+test("Una reprogramación negra transfiere el consumo sin descontarlo dos veces", () => {
+  state.periods = [{ id: ACTIVE_PERIOD_ID, month: "2026-09", status: "abierto" }];
+  const target = person("reprogrammed-person", "Jaime Valer");
+  target.current_vacation_days = 22;
+  target.excel_fields = { "VACACIONES POR VENCER": 22 };
+  state.personal.push(target);
+  const source = vacation({
+    id: "august-source",
+    collaboratorId: target.id,
+    periodId: CLOSED_PERIOD_ID,
+    start: "2026-08-17",
+    end: "2026-08-23"
+  });
+  source.status = "Reprogramado";
+  source.reprogrammed_to_id = "september-destination";
+  const destination = vacation({
+    id: "september-destination",
+    collaboratorId: target.id,
+    periodId: ACTIVE_PERIOD_ID,
+    start: "2026-09-14",
+    end: "2026-09-18"
+  });
+  destination.reprogrammed_from_id = source.id;
+  destination.is_exception_black = true;
+  destination.exception_black_days = 7;
+  state.vacations.push(source, destination);
+
+  const result = calculateVacationBalance(target);
+  assert.equal(result.current, 15);
+  assert.equal(result.allocations.has(source.id), false);
+  assert.equal(result.allocations.get(destination.id).currentDays, 7);
+});

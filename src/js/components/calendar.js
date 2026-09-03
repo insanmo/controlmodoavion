@@ -18,7 +18,7 @@ export function renderCalendar(content) {
     const date = `${month}-${String(day).padStart(2, "0")}`;
     const isToday = date === today;
     const events = uniqueCalendarEvents(vacations.filter((item) => item.start_date <= date && item.end_date >= date));
-    cells += `<div class="day-cell${isToday ? " is-today" : ""}" data-date="${date}"${isToday ? ' aria-current="date"' : ""}><div class="day-number"><span class="day-number-value">${day}</span>${isToday ? '<span class="today-label">Hoy</span>' : ""}</div>${events.map((event) => `<button class="event-pill color-${collaboratorColorIndex(event.collaborator_id)} status-${slug(event.status || "pendiente")}" data-detail="${event.id}" type="button">${safeCell(collaboratorName(event.collaborator_id))}<br>${safeCell(event.status)}</button>`).join("")}</div>`;
+    cells += `<div class="day-cell${isToday ? " is-today" : ""}" data-date="${date}"${isToday ? ' aria-current="date"' : ""}><div class="day-number"><span class="day-number-value">${day}</span>${isToday ? '<span class="today-label">Hoy</span>' : ""}</div>${events.map((event) => `<button class="event-pill color-${collaboratorColorIndex(event.collaborator_id)} status-${slug(event.status || "pendiente")}" data-detail="${event.id}" type="button">${safeCell(collaboratorName(event.collaborator_id))}<br>${event.status === "Reprogramado" && event.reprogrammed_to_id ? "No ejecutado · Reprogramado" : (event.is_exception_black ? "Vacaciones negras · " : "") + safeCell(event.status)}</button>`).join("")}</div>`;
   }
   content.innerHTML = `
     ${filterToolbar({ forceMonth: month, hideNew: true, hideExport: true })}

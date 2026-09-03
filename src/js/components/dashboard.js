@@ -293,6 +293,10 @@ export function calculateVacationBalance(person, vacations = state.vacations) {
   const allocations = new Map();
 
   for (const vacation of scopedVacations) {
+    if (vacation.status === "Reprogramado" && vacation.reprogrammed_to_id) {
+      allocations.set(vacation.id, emptyVacationAllocation());
+      continue;
+    }
     const isNonDeductible = ["descanso médico", "tarde libre"].includes(vacation.type);
     const needed = isNonDeductible ? 0 : Number(vacation.days || 0);
     const fromBlack = Math.min(black, needed);
@@ -373,6 +377,7 @@ function vacationBaseBalance(person) {
   const savedVacations = state.vacations
     .filter((item) => item.collaborator_id === person.id)
     .filter(vacationAffectsOperationalBalance)
+    .filter((item) => !(item.status === "Reprogramado" && item.reprogrammed_to_id))
     .slice()
     .sort(compareVacationOrder);
   const savedBlackDays = savedVacations.reduce((sum, item) => sum + Number(item.black_vacation_days || 0), 0);
@@ -389,6 +394,10 @@ function vacationBaseBalance(person) {
       ? internalTruncated.value
       : (excelTruncated.hasValue ? excelTruncated.value : Number(person.truncated_vacation_days || 0) + savedTruncatedDays)
   };
+}
+
+function emptyVacationAllocation() {
+  return { blackDays: 0, currentDays: 0, truncatedDays: 0, formalDays: 0, usedBlack: false, usedTruncas: false };
 }
 
 function vacationAffectsOperationalBalance(item) {

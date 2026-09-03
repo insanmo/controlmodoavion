@@ -50,6 +50,13 @@ const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_LOGIN_ATTEMPTS = 5;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const ACCOUNT_LOCK_DURATION_MS = 30 * 60 * 1000;
+const VACATION_EVIDENCE_BUCKET = "aircontrol-vacation-evidence";
+const MAX_EVIDENCE_BYTES = 5 * 1024 * 1024;
+const EVIDENCE_MIME_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp"
+};
 
 let _reqOrigin = "https://insanmo.github.io";
 let _reqIp = "unknown";
@@ -137,6 +144,8 @@ serve(async (req) => {
     if (action === "changePassword") return await changePassword(db, session.user, body);
     if (action === "assignTemporaryPassword") return await assignTemporaryPassword(db, session.user, body);
     if (action === "revokeOtherSessions") return await revokeOtherSessions(db, session);
+    if (action === "reprogramVacation") return await reprogramVacation(db, session.user, body);
+    if (action === "vacationEvidenceUrl") return await vacationEvidenceUrl(db, session.user, body);
     if (["select", "insert", "update", "delete"].includes(action)) return await tableAction(db, session.user, action, body);
     if (action === "batchUpsert") return await batchUpsert(db, session.user, body);
     if (action === "batchUpdate") return await batchUpdate(db, session.user, body);
@@ -146,6 +155,206 @@ serve(async (req) => {
     return json({ error: message }, isSessionError(message) ? 401 : 500);
   }
 });
+
+async function reprogramVacation(db: ReturnType<typeof createClient>, user: Record<string, unknown>, body: Record<string, unknown>) {
+  const sourceId = String(body.sourceId || "");
+  const startDate = String(body.startDate || "");
+  const endDate = String(body.endDate || "");
+  const returnDate = String(body.returnDate || "");
+  const reason = String(body.reason || "").trim();
+  const authorizer = String(body.authorizer || "").trim();
+  const formalConfirmed = body.formalConfirmed === true;
+  const evidence = (body.evidence || {}) as Record<string, unknown>;
+  const mimeType = String(evidence.type || "").toLowerCase();
+  const encodedEvidence = String(evidence.data || "").replace(/^data:[^;]+;base64,/, "");
+
+  if (!sourceId) return json({ error: "Selecciona el registro que se reprogramará." }, 400);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate) || endDate < startDate) {
+    return json({ error: "Ingresa un rango de fechas válido." }, 400);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(returnDate) || returnDate <= endDate) {
+    return json({ error: "La fecha de retorno debe ser posterior a la fecha fin." }, 400);
+  }
+  if (!reason) return json({ error: "Ingresa el motivo de la reprogramación." }, 400);
+  if (!authorizer) return json({ error: "Ingresa el nombre de quien autorizó la excepción." }, 400);
+  if (!formalConfirmed) return json({ error: "Confirma que el cambio fue realizado en el sistema formal." }, 400);
+  if (!EVIDENCE_MIME_EXTENSIONS[mimeType] || !encodedEvidence) {
+    return json({ error: "Adjunta una captura JPG, PNG o WebP." }, 400);
+  }
+
+  let evidenceBytes: Uint8Array;
+  try {
+    const binary = atob(encodedEvidence);
+    evidenceBytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  } catch {
+    return json({ error: "No se pudo leer la captura adjunta." }, 400);
+  }
+  if (!evidenceBytes.length || evidenceBytes.length > MAX_EVIDENCE_BYTES) {
+    return json({ error: "La captura debe pesar como máximo 5 MB." }, 400);
+  }
+  if (!validImageSignature(evidenceBytes, mimeType)) return json({ error: "El contenido de la captura no corresponde al formato indicado." }, 400);
+
+  const { data: source, error: sourceError } = await db
+    .from("aircontrol_vacations")
+    .select("*")
+    .eq("id", sourceId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (sourceError) return json({ error: sourceError.message }, 500);
+  if (!source) return json({ error: "Registro original no encontrado." }, 404);
+  if (source.type !== "vacaciones") return json({ error: "Solo se pueden reprogramar registros de vacaciones." }, 400);
+  if (source.reprogrammed_to_id || source.status === "Reprogramado") {
+    return json({ error: "Este registro ya fue reprogramado." }, 409);
+  }
+  if (source.reprogrammed_from_id) return json({ error: "Una reprogramación no puede volver a transferirse." }, 409);
+  if (Number(source.days || 0) <= 0) return json({ error: "El registro original no tiene días para transferir." }, 400);
+  if (String(source.end_date || "") >= limaDateParts().date) return json({ error: "Solo se puede reprogramar una vacación que ya no fue ejecutada." }, 400);
+  if (startDate <= String(source.end_date || "")) return json({ error: "Las nuevas fechas deben ser posteriores al registro original." }, 400);
+
+  if (user.role === "focal") {
+    if (!(await personBelongsToFocal(db, String(source.collaborator_id), String(user.id), String(user.name || "")))) {
+      return json({ error: "No tienes acceso a este colaborador." }, 403);
+    }
+    const lima = limaDateParts();
+    const { data: period } = await db.from("aircontrol_periods").select("id,month,status").eq("status", "abierto").order("month", { ascending: false }).limit(1).maybeSingle();
+    if (!period || period.status !== "abierto" || lima.day > 10 || startDate.slice(0, 7) !== period.month || lima.month !== period.month) {
+      return json({ error: "El focal solo puede reprogramar al mes operativo actual hasta el día 10." }, 403);
+    }
+  } else if (!["admin", "supervisor"].includes(String(user.role || ""))) {
+    return json({ error: "No autorizado." }, 403);
+  }
+
+  const { data: overlap, error: overlapError } = await db
+    .from("aircontrol_vacations")
+    .select("id")
+    .eq("collaborator_id", source.collaborator_id)
+    .neq("id", sourceId)
+    .is("deleted_at", null)
+    .lte("start_date", endDate)
+    .gte("end_date", startDate)
+    .limit(1)
+    .maybeSingle();
+  if (overlapError) return json({ error: overlapError.message }, 500);
+  if (overlap) return json({ error: "Las nuevas fechas se cruzan con otro registro del colaborador." }, 409);
+
+  const { data: period } = await db.from("aircontrol_periods").select("id").eq("status", "abierto").order("month", { ascending: false }).limit(1).maybeSingle();
+  const destinationId = crypto.randomUUID();
+  const extension = EVIDENCE_MIME_EXTENSIONS[mimeType];
+  const evidencePath = `${source.collaborator_id}/${destinationId}/evidence.${extension}`;
+  const { error: uploadError } = await db.storage.from(VACATION_EVIDENCE_BUCKET).upload(evidencePath, evidenceBytes, {
+    contentType: mimeType,
+    upsert: false
+  });
+  if (uploadError) return json({ error: `No se pudo guardar la evidencia: ${uploadError.message}` }, 500);
+
+  const destination = {
+    id: destinationId,
+    collaborator_id: source.collaborator_id,
+    focal_user_id: user.role === "focal" ? user.id : (source.focal_user_id || user.id),
+    po: source.po,
+    project: source.project,
+    type: "vacaciones",
+    start_date: startDate,
+    end_date: endDate,
+    return_date: returnDate,
+    days: source.days,
+    month: startDate.slice(0, 7),
+    period_id: period?.id || null,
+    status: "Completado",
+    email_status: "si",
+    email_sent: true,
+    email_date: limaDateParts().date,
+    po_approval: "si",
+    coverage_confirmed: source.coverage_confirmed || "pendiente",
+    coverage_owner: source.coverage_owner,
+    notes: source.notes,
+    registered_formal: true,
+    registered_gabin: source.registered_gabin || false,
+    created_by: user.id,
+    reprogrammed_from_id: source.id,
+    reprogram_reason: reason,
+    exception_authorizer: authorizer,
+    exception_evidence_path: evidencePath,
+    formal_reprogram_confirmed: true,
+    is_exception_black: true,
+    exception_black_days: source.days,
+    black_vacation_days: source.black_vacation_days || 0,
+    current_vacation_days_used: source.current_vacation_days_used || 0,
+    truncated_vacation_days_used: source.truncated_vacation_days_used || 0,
+    formal_vacation_days: source.formal_vacation_days || source.days,
+    used_black_vacations: true,
+    created_at: new Date().toISOString()
+  };
+
+  const { error: insertError } = await db.from("aircontrol_vacations").insert(destination);
+  if (insertError) {
+    await db.storage.from(VACATION_EVIDENCE_BUCKET).remove([evidencePath]);
+    return json({ error: insertError.message }, insertError.code === "23505" ? 409 : 500);
+  }
+  const { data: updatedSource, error: updateError } = await db.from("aircontrol_vacations").update({
+    status: "Reprogramado",
+    reprogrammed_to_id: destinationId,
+    reprogram_reason: reason,
+    exception_authorizer: authorizer,
+    formal_reprogram_confirmed: true,
+    updated_at: new Date().toISOString()
+  }).eq("id", sourceId).is("reprogrammed_to_id", null).select("id").maybeSingle();
+  if (updateError || !updatedSource) {
+    await db.from("aircontrol_vacations").delete().eq("id", destinationId);
+    await db.storage.from(VACATION_EVIDENCE_BUCKET).remove([evidencePath]);
+    return json({ error: updateError?.message || "El registro fue reprogramado por otro usuario." }, updateError ? 500 : 409);
+  }
+
+  await db.from("aircontrol_audit_log").insert({
+    user_id: user.id,
+    action: "reprogramVacation",
+    entity: "vacations",
+    entity_id: sourceId,
+    detail: { destination_id: destinationId, reason, authorizer, evidence_path: evidencePath }
+  }).then().catch(() => {});
+  return json({ ok: true, sourceId, destinationId });
+}
+
+async function vacationEvidenceUrl(db: ReturnType<typeof createClient>, user: Record<string, unknown>, body: Record<string, unknown>) {
+  const vacationId = String(body.vacationId || "");
+  const { data: vacation, error } = await db.from("aircontrol_vacations")
+    .select("id,collaborator_id,exception_evidence_path,deleted_at")
+    .eq("id", vacationId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error) return json({ error: error.message }, 500);
+  if (!vacation?.exception_evidence_path) return json({ error: "Este registro no tiene evidencia adjunta." }, 404);
+  if (user.role === "focal" && !(await personBelongsToFocal(db, String(vacation.collaborator_id), String(user.id), String(user.name || "")))) {
+    return json({ error: "No autorizado." }, 403);
+  }
+  if (!["admin", "supervisor", "focal"].includes(String(user.role || ""))) return json({ error: "No autorizado." }, 403);
+  const { data, error: signedError } = await db.storage.from(VACATION_EVIDENCE_BUCKET).createSignedUrl(vacation.exception_evidence_path, 300);
+  if (signedError || !data?.signedUrl) return json({ error: signedError?.message || "No se pudo abrir la evidencia." }, 500);
+  return json({ url: data.signedUrl });
+}
+
+function limaDateParts() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Lima",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const date = `${values.year}-${values.month}-${values.day}`;
+  return { date, month: `${values.year}-${values.month}`, day: Number(values.day) };
+}
+
+function validImageSignature(bytes: Uint8Array, mimeType: string) {
+  if (mimeType === "image/jpeg") return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (mimeType === "image/png") return bytes.length >= 8 && [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((value, index) => bytes[index] === value);
+  if (mimeType === "image/webp") {
+    return bytes.length >= 12
+      && String.fromCharCode(...bytes.slice(0, 4)) === "RIFF"
+      && String.fromCharCode(...bytes.slice(8, 12)) === "WEBP";
+  }
+  return false;
+}
 
 function isSessionError(message: string) {
   const text = String(message || "").toLowerCase();

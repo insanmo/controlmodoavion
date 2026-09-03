@@ -2971,6 +2971,60 @@ body {
 .excel-personal-table-wrap tbody tr:nth-child(even):not(.po-group-header).employee-row.alert-black-vacations td.sticky-col {
   background: #fee2e2;
 }
+
+.reprogram-square {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #f59e0b;
+  border-radius: 9px;
+  background: #fff7ed;
+  color: #c2410c;
+  cursor: pointer;
+}
+
+.reprogram-square svg { width: 17px; height: 17px; }
+.reprogram-square:hover { background: #ffedd5; }
+
+.reprogram-note {
+  display: block;
+  margin-top: 4px;
+  color: #9a3412;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.reprogram-form { min-width: min(760px, 80vw); }
+
+.reprogram-source-card,
+.reprogram-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  border: 1px solid #fed7aa;
+  border-radius: 12px;
+  background: #fff7ed;
+  color: #7c2d12;
+  padding: 14px 16px;
+}
+
+.reprogram-source-card strong,
+.reprogram-summary strong { color: #431407; }
+
+.reprogram-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.reprogram-form small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+}
 .excel-personal-table-wrap tbody tr.employee-row.alert-black-vacations .sticky-name-col {
   box-shadow: inset 5px 0 0 #dc2626, 1px 0 0 #d9e2ec;
 }

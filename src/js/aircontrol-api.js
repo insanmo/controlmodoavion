@@ -110,6 +110,14 @@ export class AirControlApi {
   async revokeOtherSessions() {
     return this.call("revokeOtherSessions");
   }
+
+  async reprogramVacation(payload) {
+    return this.call("reprogramVacation", payload);
+  }
+
+  async vacationEvidenceUrl(vacationId) {
+    return this.call("vacationEvidenceUrl", { vacationId });
+  }
 }
 
 async function functionErrorMessage(error) {

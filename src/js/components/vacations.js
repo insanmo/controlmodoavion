@@ -1,9 +1,9 @@
 import { state } from "../state.js";
 import { safeCell, dateText, dateTimeText, monthLabel, monthName, titleText, slug, personInitials, svgIcon, toDateInput, normalizeKey, calculateVacationDerived } from "../utils.js";
-import { visiblePersonal, collaboratorName, userName, emailStatusLabel, getEmailStatus, filteredVacations, activePeriod, canCurrentUserWriteVacations, minStartDateForType, minStartDateForVacationEdit, canUpdateVacationRecord, VACATION_UPDATE_CUTOFF_DAY, operationalMonthValue, vacationMinMonthValue } from "./common.js";
+import { visiblePersonal, collaboratorName, userName, emailStatusLabel, getEmailStatus, filteredVacations, activePeriod, canCurrentUserWriteVacations, minStartDateForType, minStartDateForVacationEdit, canUpdateVacationRecord, canReprogramVacationRecord, VACATION_UPDATE_CUTOFF_DAY, operationalMonthValue, vacationMinMonthValue } from "./common.js";
 import { filterToolbar } from "./common.js";
 import { collaboratorColorIndex, calculateVacationBalance, vacationTruncasUsageMap } from "./dashboard.js";
-import { persist, updateRecord, deleteRecord } from "../db.js";
+import { persist, updateRecord, deleteRecord, reprogramVacationRecord, getVacationEvidenceUrl } from "../db.js";
 import { notify, confirmAction } from "../ui.js";
 
 export function renderVacationForm(content) {
@@ -241,13 +241,128 @@ export async function markFormalRegistered(checkbox) {
 
 export function openDetail(id) {
   const item = state.vacations.find((row) => row.id === id);
+  const linkedId = item.reprogrammed_to_id || item.reprogrammed_from_id;
+  const linked = linkedId ? state.vacations.find((row) => row.id === linkedId) : null;
   document.getElementById("detailContent").innerHTML = `
     <h3>${collaboratorName(item.collaborator_id)}</h3>
     <p>${dateText(item.start_date)} al ${dateText(item.end_date)} | Retorno: ${dateText(item.return_date)}</p>
+    ${item.is_exception_black ? `<div class="reprogram-summary"><strong>Vacaciones negras transferidas</strong><span>${numberText(item.exception_black_days || item.days)} días desde ${linked ? dateText(linked.start_date) : "el registro original"}.</span><span>Autorizó: ${safeCell(item.exception_authorizer || "-")}</span><span>Motivo: ${safeCell(item.reprogram_reason || "-")}</span></div>` : ""}
+    ${item.status === "Reprogramado" && item.reprogrammed_to_id ? `<div class="reprogram-summary"><strong>No ejecutado — reprogramado</strong><span>Trasladado a ${linked ? `${dateText(linked.start_date)}–${dateText(linked.end_date)}` : "un nuevo registro"}.</span><span>Motivo: ${safeCell(item.reprogram_reason || "-")}</span></div>` : ""}
+    <div class="reprogram-detail-actions">
+      ${linked ? `<button class="ghost-btn compact-btn" data-open-linked-vacation="${linked.id}" type="button">Ver registro relacionado</button>` : ""}
+      ${item.exception_evidence_path || linked?.exception_evidence_path ? `<button class="ghost-btn compact-btn" data-open-vacation-evidence="${item.exception_evidence_path ? item.id : linked.id}" type="button">Ver evidencia</button>` : ""}
+    </div>
     ${vacationTable([item], { actions: false })}
     <div class="modal-actions"><button class="primary-btn" onclick="document.getElementById('detailDialog').close()" type="button">Cerrar</button></div>
   `;
-  document.getElementById("detailDialog").showModal();
+  const dialog = document.getElementById("detailDialog");
+  if (!dialog.open) dialog.showModal();
+  bindVacationDetailActions();
+}
+
+export function openReprogramDialog(id) {
+  const source = state.vacations.find((item) => item.id === id);
+  if (!source || !canReprogramVacationRecord(source)) return notify("No tienes permiso para reprogramar este registro.");
+  const dialog = document.getElementById("vacationDialog");
+  const content = document.getElementById("vacationDialogContent");
+  const minDate = `${operationalMonthValue()}-01`;
+  content.innerHTML = `
+    <form id="reprogramVacationForm" class="stack reprogram-form">
+      <div class="modal-title-row">
+        <div><h3>Reprogramar como vacaciones negras</h3><p>El registro original quedará como no ejecutado y los días se transferirán sin duplicar el descuento.</p></div>
+      </div>
+      <div class="reprogram-source-card">
+        <strong>${safeCell(collaboratorName(source.collaborator_id))}</strong>
+        <span>Original: ${dateText(source.start_date)}–${dateText(source.end_date)}</span>
+        <span>${numberText(source.days)} días a transferir</span>
+      </div>
+      <div class="form-grid">
+        <label>Nuevo inicio<input name="start_date" type="date" min="${minDate}" required></label>
+        <label>Nuevo fin<input name="end_date" type="date" min="${minDate}" required></label>
+        <label>Retorno<input name="return_date" type="date" readonly required></label>
+        <label>Días transferidos<input value="${numberText(source.days)} días negras" readonly></label>
+        <label class="span-2">Motivo<textarea name="reason" maxlength="1000" required placeholder="Ej.: No salió en agosto por carga operativa"></textarea></label>
+        <label>Autorizador<input name="authorizer" maxlength="160" required placeholder="Nombre de quien autorizó"></label>
+        <label>Captura de evidencia<input name="evidence" type="file" accept="image/jpeg,image/png,image/webp" required><small>JPG, PNG o WebP. Máximo 5 MB.</small></label>
+        <label class="check-field span-2"><input name="formal_confirmed" type="checkbox" required> Confirmo que la reprogramación ya fue realizada en el sistema formal.</label>
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-btn" id="cancelReprogramBtn" type="button">Cancelar</button>
+        <button class="primary-btn" type="submit">Confirmar reprogramación</button>
+      </div>
+    </form>`;
+  const form = document.getElementById("reprogramVacationForm");
+  const syncDates = () => {
+    const start = form.elements.start_date.value;
+    const end = form.elements.end_date.value;
+    form.elements.end_date.min = start || minDate;
+    if (start && end && end >= start) {
+      const derived = calculateVacationDerived(start, end);
+      form.elements.return_date.value = derived.returnDate ? toDateInput(derived.returnDate) : "";
+    } else {
+      form.elements.return_date.value = "";
+    }
+  };
+  form.elements.start_date.addEventListener("change", syncDates);
+  form.elements.end_date.addEventListener("change", syncDates);
+  form.addEventListener("submit", (event) => saveReprogramming(event, source));
+  document.getElementById("cancelReprogramBtn").addEventListener("click", () => dialog.close());
+  dialog.showModal();
+}
+
+async function saveReprogramming(event, source) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const file = form.elements.evidence.files?.[0];
+  if (!file || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) return notify("Adjunta una captura JPG, PNG o WebP.");
+  if (file.size > 5 * 1024 * 1024) return notify("La captura debe pesar como máximo 5 MB.");
+  const submit = form.querySelector('button[type="submit"]');
+  submit.disabled = true;
+  submit.textContent = "Guardando...";
+  try {
+    await reprogramVacationRecord({
+      sourceId: source.id,
+      startDate: form.elements.start_date.value,
+      endDate: form.elements.end_date.value,
+      returnDate: form.elements.return_date.value,
+      reason: form.elements.reason.value,
+      authorizer: form.elements.authorizer.value,
+      formalConfirmed: form.elements.formal_confirmed.checked,
+      evidence: { name: file.name, type: file.type, data: await fileAsDataUrl(file) }
+    });
+    document.getElementById("vacationDialog").close();
+    notify("Vacaciones reprogramadas como negras sin duplicar el descuento.");
+    const { renderApp } = await import("../app-core.js");
+    renderApp();
+  } catch (error) {
+    notify(error.message || "No se pudo reprogramar el registro.");
+    submit.disabled = false;
+    submit.textContent = "Confirmar reprogramación";
+  }
+}
+
+function fileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("No se pudo leer la captura."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function bindVacationDetailActions() {
+  document.querySelectorAll("[data-open-linked-vacation]").forEach((button) => button.addEventListener("click", () => openDetail(button.dataset.openLinkedVacation)));
+  document.querySelectorAll("[data-open-vacation-evidence]").forEach((button) => button.addEventListener("click", async () => {
+    const preview = window.open("", "_blank");
+    try {
+      const url = await getVacationEvidenceUrl(button.dataset.openVacationEvidence);
+      if (preview) preview.location = url;
+      else window.open(url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      preview?.close();
+      notify(error.message || "No se pudo abrir la evidencia.");
+    }
+  }));
 }
 
 export function exportExcel() {
@@ -286,9 +401,14 @@ export function exportExcel() {
       DiasTruncas: usage.truncatedDays,
       DiasFormales: usage.formalDays,
       SaldoFinalPendiente: finalPendingDaysFor(item.collaborator_id),
-      RegistradoSistemaFormal: usage.formalDays === 0 ? "no aplica" : (item.registered_formal ? "si" : "no"),
+      RegistradoSistemaFormal: item.is_exception_black && item.formal_reprogram_confirmed ? "si" : (usage.formalDays === 0 ? "no aplica" : (item.registered_formal ? "si" : "no")),
       UsaVacacionesNegras: usage.usedBlack || item.used_black_vacations ? "si" : "no",
       UsaVacacionesTruncas: usage.usedTruncas || item.used_truncas ? "si" : "no",
+      ReprogramadoDesde: item.reprogrammed_from_id || "",
+      ReprogramadoHacia: item.reprogrammed_to_id || "",
+      MotivoReprogramacion: item.reprogram_reason || "",
+      AutorizadorExcepcion: item.exception_authorizer || "",
+      EvidenciaAdjunta: item.exception_evidence_path ? "si" : "no",
       UltimaActualizacion: item.updated_at ? dateTimeText(item.updated_at) : ""
     };
   });
@@ -489,6 +609,13 @@ async function updateVacationRow(id, row) {
 }
 
 function usageFor(item, usageMap = vacationTruncasUsageMap()) {
+  if (item.status === "Reprogramado" && item.reprogrammed_to_id) {
+    return { blackDays: 0, currentDays: 0, truncatedDays: 0, formalDays: 0, usedBlack: false, usedTruncas: false };
+  }
+  if (item.is_exception_black) {
+    const blackDays = Number(item.exception_black_days || item.days || 0);
+    return { blackDays, currentDays: 0, truncatedDays: 0, formalDays: 0, usedBlack: true, usedTruncas: false };
+  }
   const usage = usageMap.get(item.id) || {};
   const blackDays = Number(usage.blackDays ?? item.black_vacation_days ?? 0);
   const currentDays = Number(usage.currentDays ?? item.current_vacation_days_used ?? item.days ?? 0);
@@ -530,6 +657,9 @@ function vacationRowClass(usage = {}) {
 }
 
 function formalStatusCell(item, usage = {}) {
+  if (item.is_exception_black && item.formal_reprogram_confirmed) {
+    return `<span class="status completado" title="Reprogramación confirmada en el sistema formal">Sí</span>`;
+  }
   if (Number(usage.formalDays || 0) <= 0) {
     return `<span class="muted-cell" title="Este registro solo descuenta vacaciones negras">No aplica</span>`;
   }
@@ -606,8 +736,8 @@ function vacationTable(rows, options = {}) {
         <td>${dateText(item.return_date)}</td>
         <td>${item.days || 0}</td>
         <td>${monthLabel(item.month)}</td>
-        <td><span class="status ${slug(item.status)}">${safeCell(item.status || "")}</span></td>
-        <td>${usageText(usage)}</td>
+        <td><span class="status ${slug(item.status)}">${safeCell(item.status || "")}</span>${item.status === "Reprogramado" && item.reprogrammed_to_id ? `<small class="reprogram-note">No ejecutado</small>` : ""}</td>
+        <td>${usageText(usage)}${item.is_exception_black ? `<small class="reprogram-note">Transferidas desde ${monthLabel(state.vacations.find((row) => row.id === item.reprogrammed_from_id)?.month || "")}</small>` : ""}</td>
         <td>${emailStatusLabel(item)} ${item.email_date ? `<br>${dateText(item.email_date)}` : ""}</td>
         <td>${item.registered_gabin ? "sí" : "no"}</td>
         <td>${safeCell(item.po_approval || "")}</td>
@@ -616,7 +746,7 @@ function vacationTable(rows, options = {}) {
         <td>${safeCell(item.notes || "")}</td>
         <td>${formalStatusCell(item, usage)}</td>
         <td>${dateTimeText(item.updated_at)}</td>
-        ${options.actions ? `<td><div class="table-action-buttons"><button class="edit-square" data-edit-vacation="${item.id}" type="button" ${canUpdateVacationRecord(item) ? "" : `disabled title="Editable hasta el día ${VACATION_UPDATE_CUTOFF_DAY} del mes operativo"`}>${svgIcon("edit")}</button><button class="delete-square" data-delete-vacation="${item.id}" type="button">${svgIcon("trash")}</button></div></td>` : ""}
+        ${options.actions ? `<td><div class="table-action-buttons">${canReprogramVacationRecord(item) ? `<button class="reprogram-square" data-reprogram-vacation="${item.id}" type="button" title="Reprogramar como vacaciones negras">${svgIcon("calendarDays")}</button>` : ""}<button class="edit-square" data-edit-vacation="${item.id}" type="button" ${canUpdateVacationRecord(item) && !item.reprogrammed_to_id && !item.reprogrammed_from_id ? "" : `disabled title="Este registro no se puede editar"`}>${svgIcon("edit")}</button><button class="delete-square" data-delete-vacation="${item.id}" type="button" ${item.reprogrammed_to_id || item.reprogrammed_from_id ? "disabled" : ""}>${svgIcon("trash")}</button></div></td>` : ""}
       </tr>
     `;
   }).join("");

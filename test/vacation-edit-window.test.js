@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { state } from "../src/js/state.js";
-import { canUpdateVacationRecord, minStartDateForType, minStartDateForVacationEdit, vacationMinMonthValue } from "../src/js/components/common.js";
+import { canReprogramVacationRecord, canUpdateVacationRecord, minStartDateForType, minStartDateForVacationEdit, vacationMinMonthValue } from "../src/js/components/common.js";
 
 function setOperationalSeptember() {
   state.periods = [{ id: "period-september", month: "2026-09", status: "abierto" }];
@@ -34,4 +34,22 @@ test("mantiene editables los registros futuros, incluido diciembre", () => {
   setOperationalSeptember();
   const vacation = { month: "2026-12", type: "vacaciones", start_date: "2026-12-14" };
   assert.equal(canUpdateVacationRecord(vacation, new Date(2026, 8, 20, 12)), true);
+});
+
+test("el focal reprograma su equipo hasta el día 10 y queda bloqueado después", () => {
+  setOperationalSeptember();
+  state.currentUser = { id: "focal-1", name: "Focal Uno", role: "focal" };
+  state.personal = [{ id: "person-1", name: "Persona", status: "activo", focal_user_id: "focal-1", excel_fields: {} }];
+  const vacation = { id: "vac-1", collaborator_id: "person-1", focal_user_id: "focal-1", type: "vacaciones", status: "Completado", end_date: "2026-08-23" };
+  assert.equal(canReprogramVacationRecord(vacation, new Date(2026, 8, 10, 12)), true);
+  assert.equal(canReprogramVacationRecord(vacation, new Date(2026, 8, 11, 12)), false);
+});
+
+test("admin y supervisor pueden reprogramar después del corte", () => {
+  setOperationalSeptember();
+  const vacation = { id: "vac-1", collaborator_id: "person-1", type: "vacaciones", status: "Completado", end_date: "2026-08-23" };
+  state.currentUser = { id: "admin-1", role: "admin" };
+  assert.equal(canReprogramVacationRecord(vacation, new Date(2026, 8, 20, 12)), true);
+  state.currentUser = { id: "supervisor-1", role: "supervisor" };
+  assert.equal(canReprogramVacationRecord(vacation, new Date(2026, 8, 20, 12)), true);
 });
