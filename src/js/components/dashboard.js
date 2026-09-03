@@ -213,19 +213,8 @@ export function vacationDueBuckets(people = visiblePersonal(), referenceDate = n
 }
 
 export function remainingVacationDueDays(person, vacations = state.vacations) {
-  const due = parseDateValue(person?.current_vacation_due_date);
-  if (!due) return 0;
-  const periodMonth = activePeriod()?.month || toMonth(new Date());
-  const periodStart = `${periodMonth}-01`;
-  const dueDate = toDateInput(due);
-  const baseDays = vacationBaseBalance(person).current;
-  const scheduledDays = vacations
-    .filter((item) => item.collaborator_id === person.id)
-    .filter((item) => !["descanso médico", "tarde libre"].includes(item.type))
-    .filter((item) => item.start_date && item.end_date)
-    .filter((item) => item.end_date >= periodStart && item.start_date <= dueDate)
-    .reduce((sum, item) => sum + Number(item.days || 0), 0);
-  return roundBalance(Math.max(0, baseDays - scheduledDays));
+  if (!parseDateValue(person?.current_vacation_due_date)) return 0;
+  return effectiveVacationBalance(person, vacations).current;
 }
 
 export function birthdayPeopleThisMonth(people = visiblePersonal(), vacations = visibleVacations(), referenceDate = new Date()) {
@@ -329,6 +318,24 @@ export function calculateVacationBalance(person, vacations = state.vacations) {
   }
 
   return { black, current, truncated, pending: roundBalance(black + current + truncated), allocations, base };
+}
+
+export function effectiveVacationBalance(person, vacations = state.vacations) {
+  try {
+    return calculateVacationBalance(person, vacations);
+  } catch {
+    const black = numberFromPersonExcel(person, "VACACIONES NEGRAS (Dias Laborables)").value;
+    const current = Number(person?.current_vacation_days || 0);
+    const truncated = Number(person?.truncated_vacation_days || 0);
+    return {
+      black,
+      current,
+      truncated,
+      pending: roundBalance(black + current + truncated),
+      allocations: new Map(),
+      base: { black, current, truncated }
+    };
+  }
 }
 
 export async function applyVacationBalance(person, vacations = state.vacations) {

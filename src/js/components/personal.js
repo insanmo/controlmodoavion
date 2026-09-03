@@ -3,6 +3,7 @@ import { safeCell, dateText, numberText, normalizeKey, normalizeName, normalizeP
 import { visiblePersonal, userName, activePeriod, canCurrentUserWriteVacations, periodStatusLabel, currentMonthValue, nextMonthValue, operationalMonthValue, vacationMinMonthValue, minStartDateForType } from "./common.js";
 import { persist, updateRecord, deleteRecord, upsertPersonalRows, loadData, batchUpsertImportRows, batchMarkMissingPersonal } from "../db.js";
 import { notify, confirmAction, promptAction } from "../ui.js";
+import { effectiveVacationBalance } from "./dashboard.js";
 
 export function renderPersonal(content) {
   const canManagePersonal = state.currentUser.role === "admin" || state.currentUser.role === "supervisor";
@@ -777,18 +778,25 @@ function sourceHeaderForDisplay(header) {
 
 function computedVacationFieldValue(person, header) {
   const normalized = normalizeKey(sourceHeaderForDisplay(header));
-  const black = rawExcelNumber(person, "VACACIONES NEGRAS (Dias Laborables)");
+  const balanceHeaders = new Set([
+    "vacaciones_negras_dias_laborables",
+    "vacaciones_por_vencer",
+    "vacaciones_truncas",
+    "vacaciones_ganadas",
+    "vacaciones_pendientes"
+  ]);
+  const balance = balanceHeaders.has(normalized) ? effectiveVacationBalance(person) : null;
   if (normalized === "vacaciones_negras_dias_laborables") {
-    return black;
+    return balance.black;
   }
   if (normalized === "vacaciones_por_vencer" || normalized === "vacaciones_pendientes") {
-    if (normalized === "vacaciones_pendientes") {
-      return Number(person.current_vacation_days || 0) + Number(person.truncated_vacation_days || 0) + black;
-    }
-    return Number(person.current_vacation_days || 0);
+    return normalized === "vacaciones_pendientes" ? balance.pending : balance.current;
   }
   if (normalized === "vacaciones_truncas") {
-    return Number(person.truncated_vacation_days || 0);
+    return balance.truncated;
+  }
+  if (normalized === "vacaciones_ganadas") {
+    return balance.pending;
   }
   const month = vacationMonthFromHeader(header);
   if (month) return vacationDaysForMonth(person.id, month);

@@ -5,7 +5,7 @@ import { state } from "../src/js/state.js";
 import { filteredVacations, visibleVacations } from "../src/js/components/common.js";
 import { renderCalendar } from "../src/js/components/calendar.js";
 import { renderVacationForm } from "../src/js/components/vacations.js";
-import { calculateVacationBalance, vacationDueBuckets } from "../src/js/components/dashboard.js";
+import { calculateVacationBalance, effectiveVacationBalance, vacationDueBuckets } from "../src/js/components/dashboard.js";
 
 const ACTIVE_PERIOD_ID = "dc0ca20e-e28e-4cac-89e3-1c741dddfe19";
 const CLOSED_PERIOD_ID = "25f40ea3-0378-41f3-9b93-67a45c5cd044";
@@ -231,4 +231,35 @@ test("La alerta descuenta vacaciones programadas aunque se hayan registrado en a
 
   const buckets = vacationDueBuckets([covered], new Date("2026-09-03T12:00:00"));
   assert.equal(buckets.urgent.length, 0);
+});
+
+test("El saldo efectivo actualiza por vencer, truncas y pendientes en Personal", () => {
+  state.periods = [
+    { id: ACTIVE_PERIOD_ID, month: "2026-09", status: "abierto" },
+    { id: CLOSED_PERIOD_ID, month: "2026-08", status: "cerrado" }
+  ];
+  const target = person("mixed-balance", "Saldo Mixto");
+  target.current_vacation_days = 4;
+  target.truncated_vacation_days = 25.17;
+  target.current_vacation_due_date = "2026-09-26";
+  target.excel_fields = {
+    "VACACIONES POR VENCER": 4,
+    "VACACIONES TRUNCAS": 25.17,
+    "VACACIONES GANADAS": 29.17,
+    "VACACIONES PENDIENTES": 29.17
+  };
+  state.personal.push(target);
+  state.vacations.push(vacation({
+    id: "mixed-from-august",
+    collaboratorId: target.id,
+    periodId: CLOSED_PERIOD_ID,
+    start: "2026-09-21",
+    end: "2026-09-27"
+  }));
+
+  const balance = effectiveVacationBalance(target);
+  assert.equal(balance.current, 0);
+  assert.equal(balance.truncated, 22.17);
+  assert.equal(balance.pending, 22.17);
+  assert.equal(vacationDueBuckets([target], new Date("2026-09-03T12:00:00")).urgent.length, 0);
 });
