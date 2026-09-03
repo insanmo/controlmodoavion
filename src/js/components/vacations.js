@@ -1,5 +1,5 @@
 import { state } from "../state.js";
-import { safeCell, dateText, dateTimeText, monthLabel, monthName, titleText, slug, personInitials, svgIcon, toDateInput, normalizeKey, calculateVacationDerived } from "../utils.js";
+import { safeCell, dateText, dateTimeText, monthLabel, monthName, titleText, slug, personInitials, svgIcon, toDateInput, normalizeKey, calculateVacationDerived, numberText } from "../utils.js";
 import { visiblePersonal, collaboratorName, userName, emailStatusLabel, getEmailStatus, filteredVacations, activePeriod, canCurrentUserWriteVacations, minStartDateForType, minStartDateForVacationEdit, canUpdateVacationRecord, canReprogramVacationRecord, VACATION_UPDATE_CUTOFF_DAY, operationalMonthValue, vacationMinMonthValue } from "./common.js";
 import { filterToolbar } from "./common.js";
 import { collaboratorColorIndex, calculateVacationBalance, vacationTruncasUsageMap } from "./dashboard.js";

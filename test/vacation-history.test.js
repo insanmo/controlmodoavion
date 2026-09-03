@@ -306,3 +306,9 @@ test("Una reprogramación negra transfiere el consumo sin descontarlo dos veces"
   assert.equal(result.allocations.has(source.id), false);
   assert.equal(result.allocations.get(destination.id).currentDays, 7);
 });
+
+test("El diálogo de reprogramación importa el formateador de días que utiliza", () => {
+  const source = readFileSync(new URL("../src/js/components/vacations.js", import.meta.url), "utf8");
+  const imports = source.slice(0, source.indexOf("export function"));
+  assert.match(imports, /import \{[^}]*\bnumberText\b[^}]*\} from "\.\.\/utils\.js"/s);
+});
