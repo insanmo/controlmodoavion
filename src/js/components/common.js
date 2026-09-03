@@ -28,8 +28,7 @@ export function canCurrentUserWriteVacations() {
   return activePeriod()?.status !== "cerrado";
 }
 
-export function currentMonthValue() {
-  const date = new Date();
+export function currentMonthValue(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
@@ -43,15 +42,18 @@ export function operationalMonthValue() {
   return activePeriod()?.month || currentMonthValue();
 }
 
-export function vacationMinMonthValue() {
+export function vacationMinMonthValue(today = new Date()) {
   const operationalMonth = operationalMonthValue();
   if (operationalMonth === MARCHA_BLANCA_OPERATIONAL_MONTH) return operationalMonth;
+  if (operationalMonth === currentMonthValue(today) && today.getDate() <= VACATION_UPDATE_CUTOFF_DAY) {
+    return operationalMonth;
+  }
   return nextMonthValue(operationalMonth);
 }
 
-export function minStartDateForType(type) {
+export function minStartDateForType(type, today = new Date()) {
   const vacationTypes = ["vacaciones", "otro"];
-  const base = vacationTypes.includes(type) ? vacationMinMonthValue() : operationalMonthValue();
+  const base = vacationTypes.includes(type) ? vacationMinMonthValue(today) : operationalMonthValue();
   return `${base}-01`;
 }
 
@@ -59,7 +61,7 @@ export function canUpdateVacationRecord(vacation, today = new Date()) {
   if (!vacation) return false;
   const recordMonth = String(vacation.month || vacation.start_date || "").slice(0, 7);
   if (!recordMonth) return false;
-  if (recordMonth >= vacationMinMonthValue()) return true;
+  if (recordMonth >= vacationMinMonthValue(today)) return true;
   const operationalMonth = operationalMonthValue();
   const todayMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
   return recordMonth === operationalMonth
@@ -68,12 +70,12 @@ export function canUpdateVacationRecord(vacation, today = new Date()) {
 }
 
 export function minStartDateForVacationEdit(vacation, today = new Date()) {
-  if (!vacation) return minStartDateForType("vacaciones");
+  if (!vacation) return minStartDateForType("vacaciones", today);
   const recordMonth = String(vacation.month || vacation.start_date || "").slice(0, 7);
   if (canUpdateVacationRecord(vacation, today) && recordMonth === operationalMonthValue()) {
     return `${recordMonth}-01`;
   }
-  return vacation.start_date || minStartDateForType(vacation.type);
+  return vacation.start_date || minStartDateForType(vacation.type, today);
 }
 
 export function visibleVacations(options = {}) {
