@@ -90,7 +90,6 @@ export async function saveVacation(event) {
     item.id !== id
     && item.collaborator_id === person.id
     && item.type === type
-    && sameActivePeriod(item)
     && rangesOverlap(startDate, endDate, item.start_date, item.end_date)
   );
   if (overlappingVacation) return notify("Ya existe un registro para este colaborador que se cruza con esas fechas.");
@@ -140,13 +139,13 @@ export async function saveVacation(event) {
     if (existingVacation && existingVacation.collaborator_id !== person.id) {
       const previousPerson = state.personal.find((item) => item.id === existingVacation.collaborator_id);
       if (previousPerson) {
-        const previousVacations = state.vacations.filter((item) => item.collaborator_id === previousPerson.id && item.id !== id && sameActivePeriod(item));
+        const previousVacations = state.vacations.filter((item) => item.collaborator_id === previousPerson.id && item.id !== id);
         affectedBalances.push({ person: previousPerson, result: calculateVacationBalance(previousPerson, previousVacations) });
       }
     }
 
     const proposedVacations = state.vacations
-      .filter((item) => item.collaborator_id === person.id && item.id !== id && sameActivePeriod(item))
+      .filter((item) => item.collaborator_id === person.id && item.id !== id)
       .concat(nextVacation);
     const newBalance = calculateVacationBalance(person, proposedVacations);
     const usage = newBalance.allocations.get(vacationId);
@@ -213,7 +212,7 @@ export async function removeVacation(id) {
   if (!confirmed) return;
   const person = state.personal.find((item) => item.id === vacation.collaborator_id);
   const balance = person
-    ? calculateVacationBalance(person, state.vacations.filter((item) => item.collaborator_id === person.id && item.id !== id && sameActivePeriod(item)))
+    ? calculateVacationBalance(person, state.vacations.filter((item) => item.collaborator_id === person.id && item.id !== id))
     : null;
   await deleteRecord("vacations", id);
   if (person && balance) {
@@ -535,11 +534,6 @@ function formalStatusCell(item, usage = {}) {
     return `<span class="muted-cell" title="Este registro solo descuenta vacaciones negras">No aplica</span>`;
   }
   return `<input type="checkbox" data-toggle-formal="${item.id}" ${item.registered_formal ? "checked disabled" : ""} ${state.currentUser.role === "focal" ? "disabled" : ""}>`;
-}
-
-function sameActivePeriod(item) {
-  const period = activePeriod();
-  return !period || !item.period_id || item.period_id === period.id;
 }
 
 function rangesOverlap(startA, endA, startB, endB) {

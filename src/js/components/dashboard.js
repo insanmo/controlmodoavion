@@ -201,13 +201,31 @@ export function vacationDueBuckets(people = visiblePersonal(), referenceDate = n
   const warningLimit = addMonths(today, 4);
   const buckets = { urgent: [], warning: [] };
   people.forEach((person) => {
-    if (!person.current_vacation_due_date || Number(person.current_vacation_days || 0) <= 0) return;
+    const remainingDays = remainingVacationDueDays(person);
+    if (!person.current_vacation_due_date || remainingDays <= 0) return;
     const due = parseDateValue(person.current_vacation_due_date);
     if (!due) return;
-    if (due <= urgentLimit) buckets.urgent.push(person);
-    else if (due <= warningLimit) buckets.warning.push(person);
+    const duePerson = { ...person, current_vacation_days: remainingDays };
+    if (due <= urgentLimit) buckets.urgent.push(duePerson);
+    else if (due <= warningLimit) buckets.warning.push(duePerson);
   });
   return buckets;
+}
+
+export function remainingVacationDueDays(person, vacations = state.vacations) {
+  const due = parseDateValue(person?.current_vacation_due_date);
+  if (!due) return 0;
+  const periodMonth = activePeriod()?.month || toMonth(new Date());
+  const periodStart = `${periodMonth}-01`;
+  const dueDate = toDateInput(due);
+  const baseDays = vacationBaseBalance(person).current;
+  const scheduledDays = vacations
+    .filter((item) => item.collaborator_id === person.id)
+    .filter((item) => !["descanso médico", "tarde libre"].includes(item.type))
+    .filter((item) => item.start_date && item.end_date)
+    .filter((item) => item.end_date >= periodStart && item.start_date <= dueDate)
+    .reduce((sum, item) => sum + Number(item.days || 0), 0);
+  return roundBalance(Math.max(0, baseDays - scheduledDays));
 }
 
 export function birthdayPeopleThisMonth(people = visiblePersonal(), vacations = visibleVacations(), referenceDate = new Date()) {
@@ -276,10 +294,7 @@ function startOfDay(value) {
 export function calculateVacationBalance(person, vacations = state.vacations) {
   const scopedVacations = vacations
     .filter((item) => item.collaborator_id === person.id)
-    .filter((item) => {
-      const period = activePeriod();
-      return !period || !item.period_id || item.period_id === period.id;
-    })
+    .filter(vacationAffectsOperationalBalance)
     .slice()
     .sort(compareVacationOrder);
   const base = vacationBaseBalance(person);
@@ -350,10 +365,7 @@ function vacationBaseBalance(person) {
   const excelTruncated = numberFromPersonExcel(person, "VACACIONES TRUNCAS");
   const savedVacations = state.vacations
     .filter((item) => item.collaborator_id === person.id)
-    .filter((item) => {
-      const period = activePeriod();
-      return !period || !item.period_id || item.period_id === period.id;
-    })
+    .filter(vacationAffectsOperationalBalance)
     .slice()
     .sort(compareVacationOrder);
   const savedBlackDays = savedVacations.reduce((sum, item) => sum + Number(item.black_vacation_days || 0), 0);
@@ -370,6 +382,12 @@ function vacationBaseBalance(person) {
       ? internalTruncated.value
       : (excelTruncated.hasValue ? excelTruncated.value : Number(person.truncated_vacation_days || 0) + savedTruncatedDays)
   };
+}
+
+function vacationAffectsOperationalBalance(item) {
+  const period = activePeriod();
+  if (!period || !item.period_id || item.period_id === period.id) return true;
+  return Boolean(period.month && overlapsMonth(item, period.month));
 }
 
 function numberFromPersonExcel(person, header) {

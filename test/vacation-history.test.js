@@ -5,6 +5,7 @@ import { state } from "../src/js/state.js";
 import { filteredVacations, visibleVacations } from "../src/js/components/common.js";
 import { renderCalendar } from "../src/js/components/calendar.js";
 import { renderVacationForm } from "../src/js/components/vacations.js";
+import { calculateVacationBalance, vacationDueBuckets } from "../src/js/components/dashboard.js";
 
 const ACTIVE_PERIOD_ID = "dc0ca20e-e28e-4cac-89e3-1c741dddfe19";
 const CLOSED_PERIOD_ID = "25f40ea3-0378-41f3-9b93-67a45c5cd044";
@@ -186,4 +187,48 @@ test("El filtro mensual usa fechas aunque month sea incorrecto", () => {
   const septemberIds = filteredVacations({ includeHistorical: true, month: "2026-09" }).map((item) => item.id);
   assert.ok(!augustIds.includes("wrong-derived-month"));
   assert.ok(septemberIds.includes("wrong-derived-month"));
+});
+
+test("El saldo incluye una vacación registrada en el período anterior si se ejecuta en el período activo", () => {
+  state.periods = [
+    { id: ACTIVE_PERIOD_ID, month: "2026-09", status: "abierto" },
+    { id: CLOSED_PERIOD_ID, month: "2026-08", status: "cerrado" }
+  ];
+  const target = person("prior-period-booking", "Registrado en Agosto");
+  target.current_vacation_days = 15;
+  target.excel_fields = { "VACACIONES POR VENCER": 15 };
+  state.personal.push(target);
+  state.vacations.push(vacation({
+    id: "august-registration-september-execution",
+    collaboratorId: target.id,
+    periodId: CLOSED_PERIOD_ID,
+    start: "2026-09-14",
+    end: "2026-09-27"
+  }));
+  state.vacations.at(-1).days = 14;
+
+  assert.equal(calculateVacationBalance(target).current, 1);
+});
+
+test("La alerta descuenta vacaciones programadas aunque se hayan registrado en agosto", () => {
+  state.periods = [
+    { id: ACTIVE_PERIOD_ID, month: "2026-09", status: "abierto" },
+    { id: CLOSED_PERIOD_ID, month: "2026-08", status: "cerrado" }
+  ];
+  const covered = person("covered-due-days", "Vacaciones Cubiertas");
+  covered.current_vacation_days = 12;
+  covered.current_vacation_due_date = "2026-09-26";
+  covered.excel_fields = { "VACACIONES POR VENCER": 12 };
+  state.personal.push(covered);
+  state.vacations.push(vacation({
+    id: "covered-from-august",
+    collaboratorId: covered.id,
+    periodId: CLOSED_PERIOD_ID,
+    start: "2026-09-02",
+    end: "2026-09-13"
+  }));
+  state.vacations.at(-1).days = 12;
+
+  const buckets = vacationDueBuckets([covered], new Date("2026-09-03T12:00:00"));
+  assert.equal(buckets.urgent.length, 0);
 });
