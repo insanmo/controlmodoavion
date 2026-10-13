@@ -1,5 +1,5 @@
 import { state, isUuid } from "../state.js";
-import { safeCell, dateText, numberText, normalizeKey, normalizeName, normalizePersonDisplayName, normalizeExcelDate, normalizeStatus, fallbackEmail, toDateInput, personInitials, svgIcon, monthName } from "../utils.js";
+import { safeCell, dateText, numberText, normalizeKey, normalizeName, normalizePersonDisplayName, normalizeExcelDate, normalizeStatus, fallbackEmail, toDateInput, personInitials, personPo, svgIcon, monthName } from "../utils.js";
 import { visiblePersonal, userName, activePeriod, canCurrentUserWriteVacations, periodStatusLabel, currentMonthValue, nextMonthValue, operationalMonthValue, vacationMinMonthValue, minStartDateForType } from "./common.js";
 import { persist, updateRecord, deleteRecord, upsertPersonalRows, loadData, batchUpsertImportRows, batchMarkMissingPersonal } from "../db.js";
 import { notify, confirmAction, promptAction } from "../ui.js";
@@ -594,7 +594,7 @@ async function ensurePeriodForImport() {
 const EXCEL_HEADER_ORDER = [
   "Nro", "Usuario", "MATRIC. BCP", "TM", "FECHA ING INDRA", "FECHA FIN INDRA",
   "FECHA ING BCP", "FECHA NUEVA FIN ACTA", "FECHA FIN ACTA",
-  "ROL", "SENIORITY", "Estado Junio", "PO", "CL", "FOCAL",
+  "ROL", "SENIORITY", "Estado Junio", "PO", "PO/PM", "CL", "FOCAL",
   "SQUAD REAL", "ULT. POCLAC 04-03", "TIENE MV?", "VACACIONES POR VENCER", "FECHA MAX. DE SALIDA",
   "VACACIONES TRUNCAS", "VACACIONES GANADAS", "VACACIONES JULIO",
   "VACACIONES PENDIENTES", "VACACIONES NEGRAS (Dias Laborables)",
@@ -657,6 +657,7 @@ function defaultCalculationRole(header) {
     tm: "name",
     focal: "focal",
     po: "po",
+    po_pm: "po",
     squad_real: "project",
     vacaciones_por_vencer: "current_days",
     vacaciones_truncas: "truncated_days",
@@ -741,6 +742,7 @@ function excelRawValue(person, header) {
 
 function excelFieldValue(person, header) {
   const sourceHeader = sourceHeaderForDisplay(header);
+  if (["po", "po_pm"].includes(normalizeKey(sourceHeader))) return personPo(person);
   const computedValue = computedVacationFieldValue(person, header);
   if (computedValue !== undefined) return computedValue;
 
@@ -918,7 +920,7 @@ function attachExcelFieldsToLoadedPersonal(importedPeople) {
   });
 }
 
-function normalizeAssignedExcelPersonRow(raw) {
+export function normalizeAssignedExcelPersonRow(raw) {
   const value = (...names) => {
     const key = Object.keys(raw).find((item) => names.includes(normalizeKey(item)));
     return key ? (raw[key] ?? "") : "";
@@ -931,7 +933,7 @@ function normalizeAssignedExcelPersonRow(raw) {
     name: normalizePersonDisplayName(value("nombre", "colaborador", "tm")),
     email: String(value("correo", "email", "mail")).trim().toLowerCase(),
     focal_name: String(value("focal", "focal_asignado")).trim(),
-    po: String(value("po")).trim(),
+    po: personPo({ excel_fields: raw }),
     project: String(value("proyecto_squad", "squad", "squad_real", "proyecto")).trim(),
     service_start_date: normalizeAssignedExcelDate(value("fecha_ingreso", "ingreso", "fecha_ing_indra", "fecha_ing_bcp")),
     current_vacation_days: porVencerRaw !== "" ? numberFromExcel(porVencerRaw) : (pendingRaw !== "" ? numberFromExcel(pendingRaw) : 0),

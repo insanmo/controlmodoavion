@@ -1,5 +1,5 @@
 import { state, allowedTabsForUser } from "../state.js";
-import { safeCell, dateText, toDateInput, toMonth, titleText, monthLabel, monthName, slug, personInitials, svgIcon, overlapsMonth, normalizeKey, numberText } from "../utils.js";
+import { safeCell, dateText, toDateInput, toMonth, titleText, monthLabel, monthName, slug, personInitials, personPo, svgIcon, overlapsMonth, normalizeKey, numberText } from "../utils.js";
 import { visibleVacations, visiblePersonal, collaboratorName, userName, activePeriod, canCurrentUserWriteVacations } from "./common.js";
 import { updateRecord } from "../db.js";
 import { notify } from "../ui.js";
@@ -127,7 +127,7 @@ function dashboardUrgentDuePanel(rows) {
               <span class="person-avatar color-${collaboratorColorIndex(person.id)}">${personInitials(person.name)}</span>
               <div class="due-person">
                 <strong>${safeCell(person.name)}</strong>
-                <span>${safeCell(personExcelField(person, "PO") || person.po || "-")}</span>
+                <span>${safeCell(personPo(person) || "-")}</span>
               </div>
               <strong class="due-days">${dueMonthLabel(person.current_vacation_due_date)}</strong>
               <span class="due-date">${numberText(person.current_vacation_days)} dias</span>

@@ -73,6 +73,16 @@ export function normalizeKey(value) {
   return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 }
 
+export function personPo(person) {
+  const fields = person?.excel_fields || {};
+  for (const header of ["po_pm", "po"]) {
+    const key = Object.keys(fields).find((item) => normalizeKey(item) === header);
+    const value = String(fields[key] ?? "").trim();
+    if (value) return value;
+  }
+  return String(person?.po || "").trim();
+}
+
 export function normalizeName(value) {
   return normalizeKey(String(value || "").replace(",", " "));
 }
