@@ -43,12 +43,7 @@ export function operationalMonthValue() {
 }
 
 export function vacationMinMonthValue(today = new Date()) {
-  const operationalMonth = operationalMonthValue();
-  if (operationalMonth === MARCHA_BLANCA_OPERATIONAL_MONTH) return operationalMonth;
-  if (operationalMonth === currentMonthValue(today) && today.getDate() <= VACATION_UPDATE_CUTOFF_DAY) {
-    return operationalMonth;
-  }
-  return nextMonthValue(operationalMonth);
+  return activePeriod()?.month || currentMonthValue(today);
 }
 
 export function minStartDateForType(type, today = new Date()) {
@@ -61,8 +56,10 @@ export function canUpdateVacationRecord(vacation, today = new Date()) {
   if (!vacation) return false;
   const recordMonth = String(vacation.month || vacation.start_date || "").slice(0, 7);
   if (!recordMonth) return false;
-  if (recordMonth >= vacationMinMonthValue(today)) return true;
   const operationalMonth = operationalMonthValue();
+  // El alta admite el mes operativo completo; la edición conserva su corte.
+  if (recordMonth >= nextMonthValue(operationalMonth)) return true;
+  if (operationalMonth === MARCHA_BLANCA_OPERATIONAL_MONTH && recordMonth >= operationalMonth) return true;
   const todayMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
   return recordMonth === operationalMonth
     && todayMonth === operationalMonth

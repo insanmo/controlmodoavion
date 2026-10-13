@@ -509,7 +509,7 @@ export async function activateNextPeriod() {
   if (!current) return notify("No hay un periodo operativo para avanzar.");
   if (current.status === "abierto") return notify("Primero inicie el cierre del mes operativo actual.");
   const nextMonth = nextMonthValue(current.month);
-  if (!await confirmAction(`¿Activar el periodo ${nextMonth} como mes operativo?\n\nEl mes operativo pasara de ${current.month} a ${nextMonth} y las vacaciones quedaran habilitadas desde ${nextMonthValue(nextMonth)}.`, { title: "Activar nuevo periodo", confirmText: "Activar periodo" })) return;
+  if (!await confirmAction(`¿Activar el periodo ${nextMonth} como mes operativo?\n\nEl mes operativo pasara de ${current.month} a ${nextMonth} y las vacaciones quedaran habilitadas desde ${nextMonth}.`, { title: "Activar nuevo periodo", confirmText: "Activar periodo" })) return;
   if (current.status !== "cerrado") {
     await updateRecord("periods", current.id, {
       status: "cerrado",
@@ -547,7 +547,7 @@ export async function activateNextPeriod() {
       });
     }
   }
-  notify(`Nuevo periodo ${nextMonth} activo. Vacaciones habilitadas desde ${nextMonthValue(nextMonth)}.`);
+  notify(`Nuevo periodo ${nextMonth} activo. Vacaciones habilitadas desde ${nextMonth}.`);
   const { renderApp } = await import("../app-core.js");
   renderApp();
 }
