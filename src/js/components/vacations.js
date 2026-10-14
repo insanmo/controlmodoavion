@@ -2,7 +2,7 @@ import { state } from "../state.js";
 import { safeCell, dateText, dateTimeText, monthLabel, monthName, titleText, slug, personInitials, personPo, svgIcon, toDateInput, normalizeKey, calculateVacationDerived, numberText } from "../utils.js";
 import { visiblePersonal, collaboratorName, userName, emailStatusLabel, getEmailStatus, filteredVacations, activePeriod, canCurrentUserWriteVacations, minStartDateForType, minStartDateForVacationEdit, canUpdateVacationRecord, canReprogramVacationRecord, VACATION_UPDATE_CUTOFF_DAY, operationalMonthValue, vacationMinMonthValue } from "./common.js";
 import { filterToolbar } from "./common.js";
-import { collaboratorColorIndex, calculateVacationBalance, vacationTruncasUsageMap } from "./dashboard.js";
+import { collaboratorColorIndex, calculateVacationBalance, vacationTruncasUsageMap, vacationBalanceCutoff } from "./dashboard.js";
 import { persist, updateRecord, deleteRecord, reprogramVacationRecord, getVacationEvidenceUrl } from "../db.js";
 import { notify, confirmAction } from "../ui.js";
 
@@ -671,6 +671,8 @@ function rangesOverlap(startA, endA, startB, endB) {
 
 function vacationBalanceExcelFields(person, result) {
   const fields = person.excel_fields && typeof person.excel_fields === "object" ? { ...person.excel_fields } : {};
+  const cutoff = vacationBalanceCutoff(person);
+  if (cutoff) fields.__aircontrol_vacation_cutoff_date = cutoff;
   fields.__aircontrol_vacation_base_black = result.base.black;
   fields.__aircontrol_vacation_base_current = result.base.current;
   fields.__aircontrol_vacation_base_truncated = result.base.truncated;

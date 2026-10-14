@@ -3,7 +3,7 @@ import { safeCell, dateText, numberText, normalizeKey, normalizeName, normalizeP
 import { visiblePersonal, userName, activePeriod, canCurrentUserWriteVacations, periodStatusLabel, currentMonthValue, nextMonthValue, operationalMonthValue, vacationMinMonthValue, minStartDateForType } from "./common.js";
 import { persist, updateRecord, deleteRecord, upsertPersonalRows, loadData, batchUpsertImportRows, batchMarkMissingPersonal } from "../db.js";
 import { notify, confirmAction, promptAction } from "../ui.js";
-import { effectiveVacationBalance } from "./dashboard.js";
+import { effectiveVacationBalance, importedVacationBalanceFields } from "./dashboard.js";
 
 export function renderPersonal(content) {
   const canManagePersonal = state.currentUser.role === "admin" || state.currentUser.role === "supervisor";
@@ -387,11 +387,13 @@ export async function importPersonalFromExcel(event) {
     }
     const usersByFocalName = new Map(focals.map((user) => [normalizeKey(user.name), user]));
     importId = crypto.randomUUID();
+    const uploadedAt = new Date().toISOString();
     const importedIds = new Set();
     const importRows = [];
     const personal = rows.map((raw, index) => {
       const filteredRaw = filterRawExcelFields(raw, loadableHeaders);
       const person = excelPersonFromRowObject(filteredRaw, index, usersByFocalName);
+      person.excel_fields = importedVacationBalanceFields(person, uploadedAt);
       const warnings = identityWarnings(person);
       const existing = findExistingPersonal(person);
       person.id = existing && isUuid(existing.id) ? existing.id : crypto.randomUUID();
@@ -425,7 +427,7 @@ export async function importPersonalFromExcel(event) {
       row_count: rows.length,
       warnings_count: importRows.reduce((sum, row) => sum + row.warnings.length, 0),
       uploaded_by: state.currentUser.id,
-      uploaded_at: new Date().toISOString()
+      uploaded_at: uploadedAt
     });
     const dbRows = personal.map(personalDbPayload);
     try {

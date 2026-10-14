@@ -283,7 +283,7 @@ function startOfDay(value) {
 export function calculateVacationBalance(person, vacations = state.vacations) {
   const scopedVacations = vacations
     .filter((item) => item.collaborator_id === person.id)
-    .filter(vacationAffectsOperationalBalance)
+    .filter((item) => vacationAffectsBalance(item, person))
     .slice()
     .sort(compareVacationOrder);
   const base = vacationBaseBalance(person);
@@ -376,7 +376,7 @@ function vacationBaseBalance(person) {
   const excelTruncated = numberFromPersonExcel(person, "VACACIONES TRUNCAS");
   const savedVacations = state.vacations
     .filter((item) => item.collaborator_id === person.id)
-    .filter(vacationAffectsOperationalBalance)
+    .filter((item) => vacationAffectsBalance(item, person))
     .filter((item) => !(item.status === "Reprogramado" && item.reprogrammed_to_id))
     .slice()
     .sort(compareVacationOrder);
@@ -400,10 +400,42 @@ function emptyVacationAllocation() {
   return { blackDays: 0, currentDays: 0, truncatedDays: 0, formalDays: 0, usedBlack: false, usedTruncas: false };
 }
 
-function vacationAffectsOperationalBalance(item) {
+export function vacationBalanceCutoff(person) {
+  const explicit = personExcelField(person, "__aircontrol_vacation_cutoff_date");
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(explicit))) return explicit;
+  const imported = state.personalImports.find((item) => item.id === person.last_import_id);
+  return vacationImportDate(imported?.uploaded_at);
+}
+
+function vacationImportDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(date);
+  const part = (type) => parts.find((item) => item.type === type).value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+export function importedVacationBalanceFields(person, uploadedAt) {
+  return {
+    ...person.excel_fields,
+    __aircontrol_vacation_cutoff_date: vacationImportDate(uploadedAt),
+    __aircontrol_vacation_base_black: numberFromPersonExcel(person, "VACACIONES NEGRAS (Dias Laborables)").value,
+    __aircontrol_vacation_base_current: Number(person.current_vacation_days || 0),
+    __aircontrol_vacation_base_truncated: Number(person.truncated_vacation_days || 0)
+  };
+}
+
+function vacationAffectsBalance(item, person) {
+  const cutoff = vacationBalanceCutoff(person);
+  // The imported workbook already accounts for dates up to its snapshot date.
+  // Future bookings reserve that snapshot balance regardless of their period.
+  if (cutoff) return Boolean(item.start_date && item.start_date > cutoff);
   const period = activePeriod();
   if (!period || !item.period_id || item.period_id === period.id) return true;
-  return Boolean(period.month && overlapsMonth(item, period.month));
+  return Boolean(period.month && item.end_date >= `${period.month}-01`);
 }
 
 function numberFromPersonExcel(person, header) {
