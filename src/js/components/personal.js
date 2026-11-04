@@ -866,7 +866,7 @@ function excelDisplayValue(value) {
   return safeCell(value);
 }
 
-function excelPersonFromRowObject(raw, index, usersByFocalName) {
+export function excelPersonFromRowObject(raw, index, usersByFocalName) {
   const row = normalizeAssignedExcelPersonRow(raw);
   const focalName = String(raw.FOCAL || "").trim() || row.focal_name || "";
   const focalKey = userIdentityKey(focalName);
@@ -892,7 +892,7 @@ function excelPersonFromRowObject(raw, index, usersByFocalName) {
   };
 }
 
-function personalDbPayload(person, options = {}) {
+export function personalDbPayload(person, options = {}) {
   const includeExcelFields = options.includeExcelFields !== false;
   const focalExists = isUuid(person.focal_user_id) && state.users.some((user) => user.id === person.focal_user_id);
   const payload = {
