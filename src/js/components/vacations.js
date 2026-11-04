@@ -87,13 +87,13 @@ export async function saveVacation(event) {
   const returnDate = form.get("return_date") || (derived.returnDate ? toDateInput(derived.returnDate) : "");
   if (!returnDate) return notify("Ingresa la fecha de retorno.");
   if (returnDate <= endDate) return notify("La fecha de retorno debe ser posterior a la fecha fin.");
-  const overlappingVacation = state.vacations.find((item) =>
-    item.id !== id
-    && item.collaborator_id === person.id
-    && item.type === type
-    && rangesOverlap(startDate, endDate, item.start_date, item.end_date)
-  );
-  if (overlappingVacation) return notify("Ya existe un registro para este colaborador que se cruza con esas fechas.");
+  const overlappingVacation = findVacationConflict({ id, collaborator_id: person.id, type, start_date: startDate, end_date: endDate });
+  if (overlappingVacation) {
+    const displayedMonth = state.filters.month || toMonth(new Date());
+    const shown = filteredVacations({ includeHistorical: true, month: displayedMonth }).some((item) => item.id === overlappingVacation.id);
+    const hiddenNotice = shown ? "" : ` Ese registro está oculto por los filtros de la tabla (${monthName(displayedMonth)}).`;
+    return notify(`El registro de ${person.name} del ${dateText(overlappingVacation.start_date)} al ${dateText(overlappingVacation.end_date)} (${overlappingVacation.status || "sin estado"}) se cruza con las fechas solicitadas.${hiddenNotice}`, { title: "Cruce de fechas" });
+  }
 
   const emailStatus = form.get("email_status") || "pendiente";
   if (emailStatus === "si" && !form.get("email_date")) return notify("Ingresa la fecha de correo.");
@@ -664,6 +664,18 @@ function formalStatusCell(item, usage = {}) {
     return `<span class="muted-cell" title="Este registro solo descuenta vacaciones negras">No aplica</span>`;
   }
   return `<input type="checkbox" data-toggle-formal="${item.id}" ${item.registered_formal ? "checked disabled" : ""} ${state.currentUser.role === "focal" ? "disabled" : ""}>`;
+}
+
+export function findVacationConflict(proposed, vacations = state.vacations) {
+  return vacations.find((item) =>
+    item.id !== proposed.id
+    && item.collaborator_id === proposed.collaborator_id
+    && item.type === proposed.type
+    && !item.deleted_at
+    && !(item.status === "Reprogramado" && item.reprogrammed_to_id)
+    && item.start_date && item.end_date
+    && rangesOverlap(proposed.start_date, proposed.end_date, item.start_date, item.end_date)
+  ) || null;
 }
 
 function rangesOverlap(startA, endA, startB, endB) {
