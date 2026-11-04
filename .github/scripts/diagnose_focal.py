@@ -32,3 +32,39 @@ with psycopg.connect(
         select tgname from pg_trigger where tgrelid = 'public.aircontrol_personal'::regclass
         and not tgisinternal
     """).fetchall()]}))
+
+# Keep source out of public logs; artifacts require repository authentication.
+from pathlib import Path
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError
+Path("diagnostic-source").mkdir(exist_ok=True)
+try:
+    request = Request("https://api.supabase.com/v1/projects/qibhnkzgbnzavyelybgd/functions/aircontrol-api/body", headers={"Authorization": "Bearer " + os.environ["SUPABASE_ACCESS_TOKEN"]})
+    with urlopen(request, timeout=30) as response:
+        Path("diagnostic-source/edge-function-body.bin").write_bytes(response.read())
+        print(json.dumps({"function_source_downloaded": True, "content_type": response.headers.get("Content-Type")}))
+except HTTPError as error:
+    print(json.dumps({"function_source_downloaded": False, "status": error.code}))
+
+session_token = None
+def call_api(action, **payload):
+    body = {"action": action, **payload}
+    if session_token: body["sessionToken"] = session_token
+    request = Request(os.environ["SUPABASE_URL"].rstrip("/") + "/functions/v1/aircontrol-api", data=json.dumps(body).encode(), headers={"Content-Type":"application/json", "apikey":os.environ["SUPABASE_ANON_KEY"], "Authorization":"Bearer " + os.environ["SUPABASE_ANON_KEY"]})
+    with urlopen(request, timeout=30) as response:
+        return json.load(response)
+try:
+    login = call_api("login", email=os.environ["ADMIN_EMAIL"], password=os.environ["ADMIN_TEMP_PASSWORD"])
+    session_token = login.get("sessionToken")
+    print(json.dumps({"diagnostic_login_succeeded": bool(session_token)}))
+    if session_token:
+        api_users = call_api("select", table="users").get("rows", [])
+        with psycopg.connect(host="aws-1-us-east-2.pooler.supabase.com",port=5432,user="postgres.qibhnkzgbnzavyelybgd",dbname="postgres",password=os.environ["SUPABASE_DB_PASSWORD"],sslmode="require",connect_timeout=20) as conn:
+            conn.execute("set transaction read only")
+            db_ids = {str(row[0]) for row in conn.execute("select id from public.aircontrol_users").fetchall()}
+            print(json.dumps({"api_user_count":len(api_users),"api_ids_missing_in_database":sum(str(user.get("id")) not in db_ids for user in api_users)}))
+except HTTPError as error:
+    print(json.dumps({"diagnostic_login_http_status":error.code}))
+finally:
+    if session_token:
+        call_api("logout")
