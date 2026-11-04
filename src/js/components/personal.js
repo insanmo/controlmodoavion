@@ -1,4 +1,4 @@
-import { findUserByName, focalUsers, userIdentityKey, defaultFocalUser, resolvePersonalFocal, isUnassignedFocalName } from "../user-identity.js";
+import { findUserByName, userIdentityKey, defaultFocalUser, resolvePersonalFocal, isUnassignedFocalName } from "../user-identity.js";
 import { state, isUuid } from "../state.js";
 import { safeCell, dateText, numberText, normalizeKey, normalizeName, normalizePersonDisplayName, normalizeExcelDate, normalizeStatus, fallbackEmail, toDateInput, personInitials, personPo, svgIcon, monthName } from "../utils.js";
 import { visiblePersonal, userName, activePeriod, canCurrentUserWriteVacations, periodStatusLabel, currentMonthValue, nextMonthValue, operationalMonthValue, vacationMinMonthValue, minStartDateForType } from "./common.js";
@@ -372,7 +372,6 @@ export async function importPersonalFromExcel(event) {
     const period = await ensurePeriodForImport();
     const buffer = await file.arrayBuffer();
     const book = XLSX.read(buffer, { type: "array", cellDates: true });
-    state.importedFocalCredentials = [];
     const sheetName = book.SheetNames.find((name) => normalizeKey(name) === "total") || book.SheetNames[0];
     const sourceRows = XLSX.utils.sheet_to_json(book.Sheets[sheetName], { defval: "" });
     if (!sourceRows.length) { hideLoadingOverlay(); await notify("El archivo no contiene registros."); return; }
@@ -386,23 +385,27 @@ export async function importPersonalFromExcel(event) {
       .map((column) => column.excel_header);
 
     showLoadingOverlay(`Procesando ${rows.length} registros...`);
-    const focals = state.currentUser.role === "focal" ? [state.currentUser] : focalUsers();
     const focalNames = new Set(rows.map((raw) => normalizeAssignedExcelPersonRow(raw).focal_name || String(raw.FOCAL || "").trim()).filter(Boolean));
     const usersByFocalName = new Map();
     for (const focalName of focalNames) {
-      const focal = await findOrCreateFocal(focalName, focals);
+      const focal = resolveImportFocal(focalName);
       if (focal) usersByFocalName.set(userIdentityKey(focalName), focal);
-      if (focal && !focals.some((user) => user.id === focal.id)) focals.push(focal);
     }
     importId = crypto.randomUUID();
     const uploadedAt = new Date().toISOString();
     const importedIds = new Set();
     const importRows = [];
+    let defaultAssignments = 0;
     const personal = rows.map((raw, index) => {
       const filteredRaw = filterRawExcelFields(raw, loadableHeaders);
       const person = excelPersonFromRowObject(filteredRaw, index, usersByFocalName);
       person.excel_fields = importedVacationBalanceFields(person, uploadedAt);
       const warnings = identityWarnings(person);
+      const sourceFocal = normalizeAssignedExcelPersonRow(raw).focal_name;
+      if (!findUserByName(sourceFocal, state.users.filter((user) => user.active !== false && !user.deleted_at))) {
+        defaultAssignments += 1;
+        warnings.push(`Focal sin cuenta confirmada: ${sourceFocal || "vacío"}. Asignado a ${userName(person.focal_user_id)}.`);
+      }
       const existing = findExistingPersonal(person);
       person.id = existing && isUuid(existing.id) ? existing.id : crypto.randomUUID();
       if (!state.users.some((user) => user.id === person.focal_user_id)) {
@@ -466,16 +469,12 @@ export async function importPersonalFromExcel(event) {
     await loadData();
     attachExcelFieldsToLoadedPersonal(personal);
 
-    const createdFocals = state.importedFocalCredentials || [];
-    const focalText = createdFocals.length
-      ? ` Se crearon ${createdFocals.length} focales nuevos como usuarios AirControl; revisa Usuarios para resetear sus claves si necesitan ingresar.`
-      : "";
+    const assignmentText = defaultAssignments ? ` ${defaultAssignments} colaboradores sin focal confirmado se asignaron a ${defaultFocalUser()?.name || "su responsable predeterminado"}.` : "";
     const skippedText = skippedRows ? ` Se omitieron ${skippedRows} filas sin nombre de colaborador.` : "";
-    state.importedFocalCredentials = [];
     hideLoadingOverlay();
     await notify(savedWithoutExcelFields
-      ? `${personal.length} colaboradores cargados desde la hoja ${sheetName}. Ojo: Supabase aun no tiene la columna excel_fields; ejecuta la migración nueva para persistir todas las columnas.${skippedText}${focalText}`
-      : `${personal.length} colaboradores cargados desde la hoja ${sheetName}. ${importRows.reduce((sum, row) => sum + row.warnings.length, 0)} advertencias.${skippedText}${focalText}`);
+      ? `${personal.length} colaboradores cargados desde la hoja ${sheetName}. Ojo: Supabase aun no tiene la columna excel_fields; ejecuta la migración nueva para persistir todas las columnas.${skippedText}${assignmentText}`
+      : `${personal.length} colaboradores cargados desde la hoja ${sheetName}. ${importRows.reduce((sum, row) => sum + row.warnings.length, 0)} advertencias.${skippedText}${assignmentText}`);
     const { renderApp } = await import("../app-core.js");
     renderApp();
   } catch (error) {
@@ -753,8 +752,12 @@ function excelRawValue(person, header) {
   return key ? person.excel_fields[key] : "";
 }
 
-function excelFieldValue(person, header) {
+export function excelFieldValue(person, header) {
   const sourceHeader = sourceHeaderForDisplay(header);
+  if (["focal", "focal_asignado"].includes(normalizeKey(sourceHeader))) {
+    const assigned = state.users.find((user) => user.id === person.focal_user_id);
+    if (assigned) return assigned.name;
+  }
   if (["po", "po_pm"].includes(normalizeKey(sourceHeader))) return personPo(person);
   const computedValue = computedVacationFieldValue(person, header);
   if (computedValue !== undefined) return computedValue;
@@ -1080,37 +1083,13 @@ export function sortPersonalBy(key) {
 
 // --- Focal helpers ---
 
-export async function findOrCreateFocal(name, focals) {
-  const clean = String(name || "").trim();
-  const fallback = state.currentUser.role === "focal" ? state.currentUser : defaultFocalUser();
-  if (isUnassignedFocalName(clean)) return fallback;
-  const existing = findUserByName(clean, state.users.filter((user) => user.active !== false && !user.deleted_at));
+export function resolveImportFocal(name) {
+  const activeUsers = state.users.filter((user) => user.active !== false && !user.deleted_at);
+  const existing = isUnassignedFocalName(name) ? null : findUserByName(name, activeUsers);
   if (existing) return existing;
-  if (state.currentUser.role !== "admin") return fallback;
-
-  const email = fallbackEmail(clean);
-  const existingEmail = state.users.find((user) => user.active !== false && !user.deleted_at && String(user.email || "").toLowerCase() === email.toLowerCase());
-  if (existingEmail) return existingEmail;
-  const tempPassword = `AirControl-${crypto.randomUUID().slice(0, 8)}`;
-  const user = {
-    id: crypto.randomUUID(),
-    name: normalizePersonDisplayName(clean),
-    email,
-    role: "focal",
-    temp_password: tempPassword,
-    must_change_password: true,
-    active: true,
-    created_at: new Date().toISOString()
-  };
-  await persist("users", user);
-  // The create-user RPC can reuse an email and return a different ID.
-  // Never assign personnel to the optimistic UUID generated above.
-  state.users = await state.store.select("users");
-  const savedUser = state.users.find((item) => String(item.email).toLowerCase() === email.toLowerCase());
-  if (!savedUser || savedUser.active === false) throw new Error(`No se pudo confirmar el usuario de ${clean}. Revisa Usuarios e intenta nuevamente.`);
-  state.importedFocalCredentials = state.importedFocalCredentials || [];
-  state.importedFocalCredentials.push({ name: savedUser.name, email: savedUser.email });
-  return savedUser;
+  const fallback = defaultFocalUser();
+  if (!fallback) throw new Error("Selecciona un usuario activo en Usuarios > Recibe personal sin focal antes de cargar el Excel.");
+  return fallback;
 }
 
 function showLoadingOverlay(message) {

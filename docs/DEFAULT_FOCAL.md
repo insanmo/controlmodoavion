@@ -6,9 +6,11 @@ La preferencia se comparte entre navegadores mediante una fila reservada de la t
 
 Al cargar datos con rol admin o supervisor, los colaboradores con `focal_user_id` vacío se guardan con el responsable predeterminado. Las asignaciones existentes se conservan. Las importaciones usan el mismo responsable para celdas vacías o marcadores como “Sin focal”, “Sin asignar” y “N/A”.
 
-Antes de importar y de editar personal se vuelven a consultar los usuarios. Después de crear un focal, se consulta su cuenta persistida por correo: nunca se asigna el UUID optimista. El RPC de creación puede reutilizar una cuenta por correo, conservando un UUID diferente. Si ya existe ese correo, se reutiliza sin invocar el RPC que podría cambiar su contraseña.
+Antes de importar y de editar personal se vuelven a consultar los usuarios. La importación solo utiliza cuentas activas existentes por nombre normalizado. Un nombre desconocido o abreviado sin cuenta propia (por ejemplo, Rosa H.) se asigna al responsable predeterminado; no se crean cuentas ni se cambian contraseñas desde la carga Excel. Las cuentas nuevas se administran desde Usuarios. Si no hay un responsable predeterminado válido, se indica cómo seleccionarlo antes de guardar la importación.
 
-Verificación: `npm test` cubre IDs distintos entre cliente y base, reutilización por nombre y correo, preferencia compartida, Rosa como opción inicial y asignación de colaboradores sin focal. `npm run build` genera el sitio de Pages. No se ejecutan scripts de fusión o eliminación de cuentas para esta corrección.
+La tabla y exportación de personal muestran el nombre de la cuenta realmente asignada. El nombre original del archivo se conserva en los campos e historial de importación, junto con una advertencia sobre el uso del responsable predeterminado. El mensaje de éxito informa cuántos colaboradores usaron esa asignación.
+
+Verificación: `npm test` cubre el caso Rosa H. sin cuenta, cuentas abreviadas existentes o inactivas, cambios del responsable predeterminado y ausencia de un responsable válido. El archivo suministrado se verificó localmente con el lector de la aplicación: 180 filas, cero altas de cuentas y cuatro filas Rosa H. asignadas al predeterminado. No se incluye el archivo ni datos de colaboradores en el repositorio.
 
 ## Protección en la base de datos
 

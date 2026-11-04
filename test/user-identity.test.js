@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { state } from "../src/js/state.js";
 import { findUserByName, focalUsers, userIdentityKey, defaultFocalUser, resolvePersonalFocal, DEFAULT_FOCAL_CONFIG } from "../src/js/user-identity.js";
-import { findOrCreateFocal } from "../src/js/components/personal.js";
+import { resolveImportFocal, excelFieldValue } from "../src/js/components/personal.js";
 
 const supervisor = { id: "supervisor", name: "Daniel Ayala", role: "supervisor", active: true };
 const focal = { id: "focal", name: "Daniel Ayala", role: "focal", active: true };
@@ -11,9 +11,9 @@ test("la carga reutiliza al supervisor incluso si ya hay un focal duplicado", as
   state.currentUser = { id: "admin", role: "admin" };
   state.users = [focal, supervisor];
   state.store = { insert() { assert.fail("No debe crear otra cuenta"); } };
-  assert.equal(await findOrCreateFocal("DANIEL AYALA", [focal]), supervisor);
+  assert.equal(await resolveImportFocal("DANIEL AYALA", [focal]), supervisor);
   state.users = [supervisor];
-  assert.equal(await findOrCreateFocal("Ayala, Daniel", []), supervisor);
+  assert.equal(await resolveImportFocal("Ayala, Daniel", []), supervisor);
   assert.equal(supervisor.role, "supervisor");
 });
 
@@ -37,23 +37,18 @@ test("los selectores incluyen al supervisor asignado y mantienen una sola opció
   assert.deepEqual(focalUsers(), [supervisor]);
 });
 
-test("la carga sigue creando focales nuevos cuando no existe la persona", async () => {
+test("Rosa H. sin cuenta se asigna al responsable predeterminado sin crear usuarios", () => {
+  const rosa = { id: "rosa", name: "Rosa Hernandez", role: "supervisor", active: true };
   state.currentUser = { id: "admin", role: "admin" };
-  state.users = [];
-  state.importedFocalCredentials = [];
-  const inserts = [];
-  state.store = {
-    async insert(table, row) { inserts.push({ table, row }); },
-    async select() { return inserts.map(({ row }) => ({ ...row, id: "real-database-id", temp_password: undefined })); }
-  };
-  const created = await findOrCreateFocal("Nueva Persona", []);
-  assert.equal(created.role, "focal");
-  assert.equal(created.id, "real-database-id");
-  assert.notEqual(created.id, inserts[0].row.id);
-  assert.equal(inserts.length, 1);
-  assert.equal(inserts[0].table, "users");
-  assert.equal(await findOrCreateFocal("NUEVA PERSONA", []), created);
-  assert.equal(inserts.length, 1);
+  state.users = [rosa];
+  state.defaultFocalConfig = null;
+  state.store = { insert() { assert.fail("La carga no debe crear cuentas"); }, select() { assert.fail("No hay cuenta nueva que confirmar"); } };
+  assert.equal(resolveImportFocal("Rosa H."), rosa);
+  assert.equal(resolveImportFocal("Nombre desconocido"), rosa);
+  state.users.push(supervisor);
+  state.defaultFocalConfig = { display_name: supervisor.id };
+  assert.equal(resolveImportFocal("Rosa H."), supervisor);
+  assert.equal(excelFieldValue({ focal_user_id: supervisor.id, excel_fields: { FOCAL: "Rosa H." } }, "FOCAL"), supervisor.name);
 });
 
 test("Rosa supervisora es el destino inicial; la configuración compartida permite elegir otro", () => {
@@ -76,7 +71,7 @@ test("vacíos y marcadores sin focal se asignan al predeterminado sin crear cuen
   state.defaultFocalConfig = null;
   state.store = { insert() { assert.fail("No debe crear un usuario sin focal"); } };
   for (const name of ["", "  ", "-", "Sin Focal", "SIN ASIGNAR", "N/A"]) {
-    assert.equal(await findOrCreateFocal(name, []), rosa);
+    assert.equal(await resolveImportFocal(name, []), rosa);
   }
 });
 
@@ -103,11 +98,19 @@ test("recargar guarda los colaboradores sin focal y separa la preferencia de col
   assert.equal(defaultFocalUser().id, rosa.id);
 });
 
-test("una cuenta con el correo generado se reutiliza sin cambiar su contraseña ni inventar un ID", async () => {
-  const { fallbackEmail } = await import("../src/js/utils.js");
-  const existing = { id: "real-user", name: "Nombre registrado", email: fallbackEmail("Nombre Excel"), role: "supervisor", active: true };
-  state.currentUser = { id: "admin", role: "admin" };
-  state.users = [existing];
-  state.store = { insert() { assert.fail("No debe sobrescribir la cuenta existente"); } };
-  assert.equal(await findOrCreateFocal("Nombre Excel", []), existing);
+test("una abreviatura con cuenta propia activa se conserva; si está inactiva usa el predeterminado", () => {
+  const rosa = { id: "rosa", name: "Rosa Hernandez", role: "supervisor", active: true };
+  const abbreviated = { id: "rosa-h", name: "Rosa H.", role: "focal", active: true };
+  state.users = [rosa, abbreviated];
+  state.defaultFocalConfig = null;
+  assert.equal(resolveImportFocal("Rosa H."), abbreviated);
+  abbreviated.active = false;
+  assert.equal(resolveImportFocal("Rosa H."), rosa);
+});
+
+test("un focal desconocido sin responsable configurado informa la acción necesaria sin crear cuentas", () => {
+  state.users = [];
+  state.defaultFocalConfig = null;
+  state.store = { insert() { assert.fail("No debe crear usuarios"); } };
+  assert.throws(() => resolveImportFocal("Rosa H."), /Recibe personal sin focal/);
 });
