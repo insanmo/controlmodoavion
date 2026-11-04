@@ -1,3 +1,4 @@
+import { focalUsers } from "../user-identity.js";
 import { state, TABLES } from "../state.js";
 import { visiblePersonal } from "./common.js";
 import { safeCell, dateText, toDateInput, personInitials, svgIcon } from "../utils.js";
@@ -44,7 +45,7 @@ function canWriteFocal() {
 
 function focalOptions() {
   if (isFocal()) return [[state.currentUser.id, state.currentUser.name]];
-  return state.users.filter((u) => u.role === "focal").map((u) => [u.id, u.name]);
+  return focalUsers().map((u) => [u.id, u.name]);
 }
 
 function personSelectOptions(selectedId = "") {

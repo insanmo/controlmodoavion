@@ -1,3 +1,4 @@
+import { focalUsers, findUserByName } from "../user-identity.js";
 import { state } from "../state.js";
 import { safeCell, dateText, dateTimeText, monthLabel, monthName, titleText, slug, personInitials, personPo, svgIcon, toDateInput, normalizeKey, calculateVacationDerived, numberText } from "../utils.js";
 import { visiblePersonal, collaboratorName, userName, emailStatusLabel, getEmailStatus, filteredVacations, activePeriod, canCurrentUserWriteVacations, minStartDateForType, minStartDateForVacationEdit, canUpdateVacationRecord, canReprogramVacationRecord, VACATION_UPDATE_CUTOFF_DAY, operationalMonthValue, vacationMinMonthValue } from "./common.js";
@@ -494,7 +495,7 @@ function vacationFocalField(vacation, selectedPerson) {
   if (state.currentUser.role === "focal") {
     return `<label>Focal<input name="focal_display" value="${safeCell(state.currentUser.name)}" readonly><input type="hidden" name="focal_user_id" value="${state.currentUser.id}"></label>`;
   }
-  const focalOptions = state.users.filter((user) => user.role === "focal").map((user) => [user.id, user.name]);
+  const focalOptions = focalUsers().map((user) => [user.id, user.name]);
   const selectedFocal = vacationFocalUser(selectedPerson, vacation?.focal_user_id);
   return `<label>Focal<select name="focal_user_id"><option value=""></option>${focalOptions.map(([value, text]) => `<option value="${value}" ${String(selectedFocal?.id || "") === String(value) ? "selected" : ""}>${safeCell(text)}</option>`).join("")}</select></label>`;
 }
@@ -502,7 +503,7 @@ function vacationFocalField(vacation, selectedPerson) {
 function vacationFocalUser(person, fallbackId = "") {
   if (!person) return state.users.find((user) => user.id === fallbackId) || null;
   const focalName = vacationFocalName(person);
-  if (focalName) return state.users.find((user) => user.role === "focal" && normalizeKey(user.name) === normalizeKey(focalName)) || null;
+  if (focalName) return findUserByName(focalName) || null;
   return state.users.find((user) => user.id === (fallbackId || person.focal_user_id)) || null;
 }
 

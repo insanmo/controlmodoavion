@@ -1,3 +1,4 @@
+import { findUserByName, defaultFocalUser, DEFAULT_FOCAL_CONFIG } from "../user-identity.js";
 import { state, isIndraEmail } from "../state.js";
 import { safeCell, inputField, selectField } from "../utils.js";
 import { persist, updateRecord, deleteRecord, loadData } from "../db.js";
@@ -38,6 +39,10 @@ export async function saveUser(event) {
   if (!name) return notify("Ingresa el nombre del usuario.");
   if (!isIndraEmail(email)) return notify("Usa un correo corporativo Indra.");
   if (state.users.some((user) => user.id !== id && String(user.email || "").toLowerCase() === email)) return notify("El usuario ya existe.");
+  const samePerson = findUserByName(name, state.users.filter((user) => user.id !== id));
+  if (samePerson) return notify(`Ya existe una cuenta para ${samePerson.name} con rol ${samePerson.role}. Edita esa cuenta para cambiar su rol.`);
+
+  if (editingUser && defaultFocalUser()?.id === id && form.active === "false") return notify("Elige otro responsable del personal sin focal antes de desactivar este usuario.");
 
   if (editingUser) {
     await updateRecord("users", id, {
@@ -77,7 +82,7 @@ function userTable() {
   return `
     <div class="table-wrap users-table-wrap">
       <table>
-        <thead><tr><th>${userSortHeader("name", "Nombre")}</th><th>${userSortHeader("email", "Correo")}</th><th>${userSortHeader("role", "Rol")}</th><th>${userSortHeader("must_change_password", "Debe cambiar clave")}</th><th>${userSortHeader("active", "Activo")}</th><th>Clave temporal</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>${userSortHeader("name", "Nombre")}</th><th>${userSortHeader("email", "Correo")}</th><th>${userSortHeader("role", "Rol")}</th><th>${userSortHeader("must_change_password", "Debe cambiar clave")}</th><th>${userSortHeader("active", "Activo")}</th><th>Recibe personal sin focal</th><th>Clave temporal</th><th>Acciones</th></tr></thead>
         <tbody>
           ${users.map((user) => `
             <tr>
@@ -86,6 +91,7 @@ function userTable() {
               <td><span class="status reprogramado">${safeCell(user.role)}</span></td>
               <td>${user.must_change_password ? "si" : "no"}</td>
               <td><span class="status ${user.active !== false ? "completado" : "observado"}">${user.active !== false ? "activo" : "inactivo"}</span></td>
+              <td><input type="radio" name="default_focal" aria-label="Asignar personal sin focal a ${safeCell(user.name)}" data-default-focal="${user.id}" ${defaultFocalUser()?.id === user.id ? "checked" : ""} ${user.active === false ? "disabled" : ""}></td>
               <td><input class="temp-password-input user-temp-password-input" data-user-temp-password="${user.id}" type="password" minlength="8" placeholder="Min. 8 caracteres"></td>
               <td>
                 <div class="table-action-buttons user-action-buttons">
@@ -154,6 +160,7 @@ export function cancelUserEdit() {
 export async function toggleUserActive(id) {
   const user = state.users.find((item) => item.id === id);
   if (!user) return notify("Usuario no encontrado.");
+  if (defaultFocalUser()?.id === user.id && user.active !== false) return notify("Elige otro responsable del personal sin focal antes de desactivar este usuario.");
   if (user.id === state.currentUser.id && user.active !== false) return notify("No puedes desactivar tu propio usuario.");
   await updateRecord("users", id, { active: user.active === false, updated_at: new Date().toISOString() });
   notify(user.active === false ? "Usuario activado." : "Usuario desactivado.");
@@ -164,6 +171,7 @@ export async function toggleUserActive(id) {
 export async function removeUser(id) {
   const user = state.users.find((item) => item.id === id);
   if (!user) return notify("Usuario no encontrado.");
+  if (defaultFocalUser()?.id === user.id) return notify("Elige otro responsable del personal sin focal antes de eliminar este usuario.");
   if (user.id === state.currentUser.id) return notify("No puedes eliminar tu propio usuario.");
   const confirmed = await confirmAction(`Eliminar el usuario ${user.name}?`, { title: "Eliminar usuario", confirmText: "Eliminar" });
   if (!confirmed) return;
@@ -203,5 +211,24 @@ export async function resetUserPassword(id) {
     await import("../app-core.js").then((mod) => mod.renderApp({ forceReload: true }));
   } catch (error) {
     notify(`No se pudo asignar la clave temporal: ${error.message}`);
+  }
+}
+
+export async function setDefaultFocal(id) {
+  const user = state.users.find((item) => item.id === id && item.active !== false);
+  if (!user) return notify("Selecciona un usuario activo.");
+  const row = {
+    id: state.defaultFocalConfig?.id || "6f0973b1-1472-4c3e-84c1-d41fa9912b78",
+    excel_header: DEFAULT_FOCAL_CONFIG, display_name: id, data_type: "text",
+    load_to_db: false, show_in_personal: false, display_order: -1,
+    calculation_role: null, updated_at: new Date().toISOString()
+  };
+  try {
+    await state.store.batchUpsert("columnConfigs", [row]);
+    await loadData(state.currentUser?.role);
+    notify(`El personal sin focal se asignará a ${user.name}.`);
+  } finally {
+    const { renderApp } = await import("../app-core.js");
+    renderApp();
   }
 }

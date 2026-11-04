@@ -9,7 +9,7 @@ import { renderVacationForm, renderConsolidated, saveVacation, removeVacation, m
 import { renderPersonal, openPersonalDialog, removePersonal, importPersonalFromExcel, exportPersonalExcel, sortPersonalBy, startPeriodClose, activateNextPeriod, reopenPeriod } from "./components/personal.js";
 import { minStartDateForType } from "./components/common.js";
 import { renderCalendar, shiftCalendarMonth } from "./components/calendar.js";
-import { renderUsers, saveUser, resetUserPassword, sortUsersBy, editUser, cancelUserEdit, toggleUserActive, removeUser } from "./components/users.js";
+import { renderUsers, saveUser, resetUserPassword, sortUsersBy, editUser, cancelUserEdit, toggleUserActive, removeUser, setDefaultFocal } from "./components/users.js";
 import { renderRequests, resolveRequest } from "./components/requests.js";
 import { renderSettings, saveHoliday, removeHoliday, saveColumnConfig, disableColumnConfig, cancelColumnEdit, editColumnRow, cancelColumnRowEdit, saveColumnConfigRow, editHolidayRow, cancelHolidayRowEdit, saveHolidayRow } from "./components/settings.js";
 import { renderProfilePage, saveProfilePage, cancelProfilePage, revokeSessions } from "./components/profile.js";
@@ -287,6 +287,7 @@ function bindDynamicEvents() {
   });
 
   // Users
+  document.querySelectorAll("[data-default-focal]").forEach((input) => input.addEventListener("change", () => setDefaultFocal(input.dataset.defaultFocal)));
   document.getElementById("userForm")?.addEventListener("submit", saveUser);
   document.getElementById("cancelUserEditBtn")?.addEventListener("click", cancelUserEdit);
   document.querySelectorAll("[data-edit-user]").forEach((btn) => btn.addEventListener("click", () => editUser(btn.dataset.editUser)));

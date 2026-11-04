@@ -1,3 +1,4 @@
+import { focalUsers } from "../user-identity.js";
 import { state } from "../state.js";
 import { safeCell, dateText, titleText, slug, svgIcon, normalizeKey } from "../utils.js";
 
@@ -138,7 +139,7 @@ export function emailStatusLabel(item) {
 }
 
 export function filterToolbar(options = {}) {
-  const focals = state.users.filter((user) => user.role === "focal");
+  const focals = focalUsers();
   const monthValue = options.forceMonth ?? state.filters.month ?? (options.allowEmptyMonth ? "" : toMonthInput(new Date()));
   const periodOptions = options.showPeriod
     ? `<label>Periodo<select data-filter="period"><option value="">Todos</option>${state.periods.map((period) => `<option value="${period.id}" ${state.filters.period === period.id ? "selected" : ""}>${safeCell(period.month)} - ${safeCell(periodStatusLabel(period.status))}</option>`).join("")}</select></label>`

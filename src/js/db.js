@@ -1,3 +1,4 @@
+import { DEFAULT_FOCAL_CONFIG, defaultFocalUser } from "./user-identity.js";
 import { state, TABLES } from "./state.js";
 import { cleanMojibake } from "./security.js";
 
@@ -40,7 +41,8 @@ export async function loadData(userRole) {
   state.vacations = vacations;
   state.holidays = holidays;
   state.periods = periods || [];
-  state.columnConfigs = columnConfigs || [];
+  state.defaultFocalConfig = (columnConfigs || []).find((row) => row.excel_header === DEFAULT_FOCAL_CONFIG) || null;
+  state.columnConfigs = (columnConfigs || []).filter((row) => row.excel_header !== DEFAULT_FOCAL_CONFIG);
   state.personalImports = personalImports || [];
   state.focalTasks = focalTasks;
   state.focalRadar = focalRadar;
@@ -50,6 +52,16 @@ export async function loadData(userRole) {
   state.poclacDrafts = poclacDrafts;
   state.passwordRequests = passwordRequests || [];
   sanitizeLoadedText();
+  const defaultFocal = defaultFocalUser();
+  if (defaultFocal && ["admin", "supervisor"].includes(state.currentUser?.role)) {
+    const unassigned = state.personal.filter((person) => !person.focal_user_id);
+    if (unassigned.length) {
+      await state.store.batchUpdate("personal", unassigned.map((person) => person.id), {
+        focal_user_id: defaultFocal.id, updated_at: new Date().toISOString()
+      });
+      unassigned.forEach((person) => { person.focal_user_id = defaultFocal.id; });
+    }
+  }
   state.dataLoaded = true;
 }
 

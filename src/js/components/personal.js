@@ -1,3 +1,4 @@
+import { findUserByName, focalUsers, userIdentityKey, defaultFocalUser, resolvePersonalFocal, isUnassignedFocalName } from "../user-identity.js";
 import { state, isUuid } from "../state.js";
 import { safeCell, dateText, numberText, normalizeKey, normalizeName, normalizePersonDisplayName, normalizeExcelDate, normalizeStatus, fallbackEmail, toDateInput, personInitials, personPo, svgIcon, monthName } from "../utils.js";
 import { visiblePersonal, userName, activePeriod, canCurrentUserWriteVacations, periodStatusLabel, currentMonthValue, nextMonthValue, operationalMonthValue, vacationMinMonthValue, minStartDateForType } from "./common.js";
@@ -293,7 +294,7 @@ function syncPersonalExcelFields(row) {
   if (email !== undefined && String(email).trim()) row.email = String(email).trim().toLowerCase();
   if (status !== undefined) row.status = normalizeStatus(status);
   if (focalName !== undefined && state.currentUser.role !== "focal") {
-    const focal = state.users.find((user) => user.role === "focal" && normalizeKey(user.name) === normalizeKey(focalName));
+    const focal = findUserByName(focalName);
     if (focal) row.focal_user_id = focal.id;
   }
 }
@@ -322,7 +323,12 @@ async function savePersonal(event) {
     status: existing?.status || "activo",
     excel_fields: excelFields
   };
+  state.users = await state.store.select("users");
   syncPersonalExcelFields(row);
+  const focalHeader = Object.keys(row.excel_fields).find((header) => normalizeKey(header) === "focal");
+  const focal = resolvePersonalFocal(row, focalHeader ? row.excel_fields[focalHeader] : "");
+  if (!focal) return notify("Selecciona en Usuarios quién recibe el personal sin focal.");
+  row.focal_user_id = focal.id;
   if (!row.name?.trim()) return notify("Ingresa el nombre del colaborador.");
   if (!row.email) row.email = fallbackEmail(row.name, excelFields);
   if (id) {
@@ -362,6 +368,7 @@ export async function importPersonalFromExcel(event) {
   showLoadingOverlay("Procesando archivo Excel...");
   let importId = null;
   try {
+    await loadData(state.currentUser?.role);
     const period = await ensurePeriodForImport();
     const buffer = await file.arrayBuffer();
     const book = XLSX.read(buffer, { type: "array", cellDates: true });
@@ -379,13 +386,14 @@ export async function importPersonalFromExcel(event) {
       .map((column) => column.excel_header);
 
     showLoadingOverlay(`Procesando ${rows.length} registros...`);
-    const focals = state.currentUser.role === "focal" ? [state.currentUser] : state.users.filter((user) => user.role === "focal");
+    const focals = state.currentUser.role === "focal" ? [state.currentUser] : focalUsers();
     const focalNames = new Set(rows.map((raw) => normalizeAssignedExcelPersonRow(raw).focal_name || String(raw.FOCAL || "").trim()).filter(Boolean));
+    const usersByFocalName = new Map();
     for (const focalName of focalNames) {
       const focal = await findOrCreateFocal(focalName, focals);
+      if (focal) usersByFocalName.set(userIdentityKey(focalName), focal);
       if (focal && !focals.some((user) => user.id === focal.id)) focals.push(focal);
     }
-    const usersByFocalName = new Map(focals.map((user) => [normalizeKey(user.name), user]));
     importId = crypto.randomUUID();
     const uploadedAt = new Date().toISOString();
     const importedIds = new Set();
@@ -398,7 +406,10 @@ export async function importPersonalFromExcel(event) {
       const existing = findExistingPersonal(person);
       person.id = existing && isUuid(existing.id) ? existing.id : crypto.randomUUID();
       if (!state.users.some((user) => user.id === person.focal_user_id)) {
-        person.focal_user_id = (state.currentUser.role === "focal" ? state.currentUser : focals[0])?.id || null;
+        person.focal_user_id = defaultFocalUser()?.id || null;
+      }
+      if (!person.focal_user_id) {
+        throw new Error("Selecciona en Usuarios quién recibe el personal sin focal antes de cargar el Excel.");
       }
       person.active_period_id = period?.id || null;
       person.last_import_id = importId;
@@ -857,9 +868,9 @@ function excelDisplayValue(value) {
 
 function excelPersonFromRowObject(raw, index, usersByFocalName) {
   const row = normalizeAssignedExcelPersonRow(raw);
-  const focalName = String(raw.FOCAL || "").trim() || row.focal_name || "Focal";
-  const focalKey = normalizeKey(focalName);
-  const focal = usersByFocalName.get(focalKey);
+  const focalName = String(raw.FOCAL || "").trim() || row.focal_name || "";
+  const focalKey = userIdentityKey(focalName);
+  const focal = usersByFocalName.get(focalKey) || defaultFocalUser();
   const email = fallbackEmail(row.name || `usuario-${index + 1}`, raw);
   return {
     id: `excel-person-${String(index + 1).padStart(4, "0")}`,
@@ -1071,13 +1082,15 @@ export function sortPersonalBy(key) {
 
 export async function findOrCreateFocal(name, focals) {
   const clean = String(name || "").trim();
-  const fallback = state.currentUser.role === "focal" ? state.currentUser : focals[0];
-  if (!clean) return fallback;
-  const existing = state.users.find((user) => user.role === "focal" && normalizeName(user.name) === normalizeName(clean));
+  const fallback = state.currentUser.role === "focal" ? state.currentUser : defaultFocalUser();
+  if (isUnassignedFocalName(clean)) return fallback;
+  const existing = findUserByName(clean, state.users.filter((user) => user.active !== false && !user.deleted_at));
   if (existing) return existing;
   if (state.currentUser.role !== "admin") return fallback;
 
   const email = fallbackEmail(clean);
+  const existingEmail = state.users.find((user) => user.active !== false && !user.deleted_at && String(user.email || "").toLowerCase() === email.toLowerCase());
+  if (existingEmail) return existingEmail;
   const tempPassword = `AirControl-${crypto.randomUUID().slice(0, 8)}`;
   const user = {
     id: crypto.randomUUID(),
@@ -1090,9 +1103,11 @@ export async function findOrCreateFocal(name, focals) {
     created_at: new Date().toISOString()
   };
   await persist("users", user);
-  const savedUser = { ...user };
-  delete savedUser.temp_password;
-  state.users.push(savedUser);
+  // The create-user RPC can reuse an email and return a different ID.
+  // Never assign personnel to the optimistic UUID generated above.
+  state.users = await state.store.select("users");
+  const savedUser = state.users.find((item) => String(item.email).toLowerCase() === email.toLowerCase());
+  if (!savedUser || savedUser.active === false) throw new Error(`No se pudo confirmar el usuario de ${clean}. Revisa Usuarios e intenta nuevamente.`);
   state.importedFocalCredentials = state.importedFocalCredentials || [];
   state.importedFocalCredentials.push({ name: savedUser.name, email: savedUser.email });
   return savedUser;
