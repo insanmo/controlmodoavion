@@ -19,6 +19,13 @@ with psycopg.connect(host="aws-1-us-east-2.pooler.supabase.com",port=5432,
       where active and coalesce(to_jsonb(aircontrol_users)->>'deleted_at', '') = ''
       order by (id <> %s) desc, id limit 1
     """, (default_id,)).fetchone()
+    chosen_id = conn.execute("""
+      select id from public.aircontrol_users
+      where active and coalesce(to_jsonb(aircontrol_users)->>'deleted_at', '') = ''
+        and public.aircontrol_focal_name_key(name) = public.aircontrol_focal_name_key(%s)
+      order by case role when 'admin' then 3 when 'supervisor' then 2 else 1 end desc,
+        created_at,id limit 1
+    """, (chosen_name,)).fetchone()[0]
     conn.execute("savepoint regression_probes")
     conn.execute("set local role service_role")
     def insert_probe(focal_id, name):
@@ -40,6 +47,19 @@ with psycopg.connect(host="aws-1-us-east-2.pooler.supabase.com",port=5432,
        where id=%s returning focal_user_id
     """, (uuid.uuid4(),Jsonb({"FOCAL":chosen_name}),probe_id)).fetchone()[0]
     assert resolved == chosen_id, "Updates must resolve stale focal IDs"
+    for name in json.loads(os.environ.get("FOCAL_NAMES", "[]")):
+        # Compute the expected canonical user as postgres, test the insert as the API role.
+        conn.execute("set local role postgres")
+        expected = conn.execute("""
+          select id from public.aircontrol_users
+          where active and coalesce(to_jsonb(aircontrol_users)->>'deleted_at', '') = ''
+            and public.aircontrol_focal_name_key(name) = public.aircontrol_focal_name_key(%s)
+          order by case role when 'admin' then 3 when 'supervisor' then 2 else 1 end desc,
+            created_at,id limit 1
+        """, (name,)).fetchone()
+        conn.execute("set local role service_role")
+        _, resolved = insert_probe(uuid.uuid4(), name)
+        assert resolved == (expected[0] if expected else default_id), "Workbook focal failed canonical resolution"
     conn.execute("rollback to savepoint regression_probes")
     # This also persists the initial Rosa selection in the shared configuration.
     conn.execute("""
@@ -59,5 +79,6 @@ with psycopg.connect(host="aws-1-us-east-2.pooler.supabase.com",port=5432,
     assert constraints == 1, "Original validated foreign key must remain"
     conn.commit()
     print(json.dumps({"repair_committed":True,"database_regression_checks":5,
+      "workbook_focal_cases":len(json.loads(os.environ.get("FOCAL_NAMES", "[]"))),
       "test_rows_persisted":0,"previously_unassigned_rows_repaired":repaired,
       "original_foreign_key_preserved":True,"shared_default_saved":True}))

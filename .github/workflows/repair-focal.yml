@@ -1,6 +1,12 @@
 name: Repair personnel focal assignment
 on:
   workflow_dispatch:
+    inputs:
+      focal_names:
+        description: Optional focal names to verify without saving test rows
+        required: false
+        default: '[]'
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -20,4 +26,5 @@ jobs:
       - name: Apply and verify focal repair in one transaction
         env:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          FOCAL_NAMES: ${{ inputs.focal_names }}
         run: python .github/scripts/repair_focal.py

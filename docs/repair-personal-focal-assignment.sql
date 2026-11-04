@@ -43,7 +43,6 @@ begin
   -- Preserve real assignments. The FK remains the final integrity check.
   if new.focal_user_id is not null and exists (
     select 1 from public.aircontrol_users u where u.id = new.focal_user_id
-      and u.active and coalesce(to_jsonb(u)->>'deleted_at', '') = ''
   ) then return new; end if;
 
   select field.value into focal_name
